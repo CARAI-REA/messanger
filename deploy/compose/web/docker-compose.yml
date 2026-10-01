@@ -1,0 +1,16 @@
+services:
+  web:
+    build:
+      context: ../../../web
+      dockerfile: Dockerfile
+    container_name: messanger-web
+    ports:
+      - "${WEB_PORT:-8088}:80"
+    restart: unless-stopped
+    networks:
+      - messanger-net
+
+networks:
+  messanger-net:
+    external: true
+    name: messanger-net

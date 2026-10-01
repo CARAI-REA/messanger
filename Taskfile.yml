@@ -7,7 +7,7 @@ vars:
   ENVSUBST: '{{.BIN_DIR}}/envsubst'
   ENVDIR: '{{.ROOT_DIR}}/deploy/env'
   MODULES: platform,shared,user,auth,chat,gateway,media,search,notify
-  SERVICES: core,user,auth,chat,gateway,media,search,notify,envoy,observability
+  SERVICES: core,user,auth,chat,gateway,media,search,notify,envoy,observability,web
 
 tasks:
   proto:gen:
@@ -85,6 +85,11 @@ tasks:
     cmds:
       - docker compose -f deploy/compose/observability/docker-compose.yml --env-file deploy/compose/observability/.env up -d --build
 
+  up-web:
+    deps: [env:generate]
+    cmds:
+      - docker compose -f deploy/compose/web/docker-compose.yml --env-file deploy/compose/web/.env up -d --build
+
   up-all:
     cmds:
       - task: up-core
@@ -97,11 +102,12 @@ tasks:
       - task: up-gateway
       - task: up-envoy
       - task: up-observability
+      - task: up-web
 
   down-all:
     cmds:
       - |
-        for s in observability envoy gateway notify search media chat auth user core; do
+        for s in web observability envoy gateway notify search media chat auth user core; do
           docker compose -f deploy/compose/$s/docker-compose.yml --env-file deploy/compose/$s/.env down || true
         done
 

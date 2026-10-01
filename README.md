@@ -37,10 +37,13 @@ task up-notify
 task up-gateway
 task up-envoy
 task up-observability
+task up-web
 # or: task up-all
 
 task smoke
 ```
+
+Web UI (Telegram-style): http://localhost:8088 after `task up-web`.
 
 Gateway scale check: `task up-gateway-scaled`
 

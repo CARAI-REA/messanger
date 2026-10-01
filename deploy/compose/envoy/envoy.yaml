@@ -62,6 +62,9 @@ static_resources:
               - media.v1.MediaService
               - search.v1.SearchService
               - notify.v1.NotifyService
+              # Keep original HTTP paths for route matching (otherwise path becomes
+              # /pkg.Service/Method and falls through to the "/" 404 direct_response).
+              match_incoming_request_route: true
               print_options:
                 add_whitespace: false
                 always_print_primitive_fields: true

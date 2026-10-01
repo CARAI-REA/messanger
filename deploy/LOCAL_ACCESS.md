@@ -18,5 +18,20 @@ After `task up-all`:
 | OpenSearch | http://localhost:9200 |
 | Grafana | http://localhost:3000 (admin/admin) |
 | Prometheus | http://localhost:9095 |
+| **Web UI** | **http://localhost:8088** |
 
 Generate env: `task env:generate`
+
+### Web UI
+
+Telegram-style SPA (`web/`) served by nginx on port **8088**. Same origin proxies:
+
+- `/api/*` → Envoy `:8080`
+- `/ws`, `/v1/ws` → Gateway `:8082` (Authorization from `access_token` cookie)
+
+```bash
+task up-web
+# or included in: task up-all
+```
+
+Dev without Docker: `cd web && npm install && npm run dev` (Vite proxies to localhost Envoy/Gateway).
