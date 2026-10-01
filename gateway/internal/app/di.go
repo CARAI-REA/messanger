@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"time"
 
 	"github.com/CARAI-REA/messanger/platform/pkg/closer"
 	"github.com/CARAI-REA/messanger/platform/pkg/logger"
@@ -185,13 +186,7 @@ func (d *diContainer) forwardRealtime(data []byte) {
 			d.Hub().AddChat(mc.GetUserId(), ev.GetChatId())
 		case "removed":
 			// Deliver leave notice to the removed user, then drop membership.
-			payload, err := json.Marshal(map[string]any{
-				"type":     "chat.realtime",
-				"event_id": ev.EventId,
-				"chat_id":  ev.ChatId,
-				"actor_id": ev.ActorId,
-				"payload":  base64.StdEncoding.EncodeToString(data),
-			})
+			payload, err := json.Marshal(realtimeEnvelope(&ev, data))
 			if err == nil {
 				d.Hub().SendToUser(mc.GetUserId(), payload)
 			}
@@ -199,13 +194,7 @@ func (d *diContainer) forwardRealtime(data []byte) {
 		}
 	}
 
-	payload, err := json.Marshal(map[string]any{
-		"type":     "chat.realtime",
-		"event_id": ev.EventId,
-		"chat_id":  ev.ChatId,
-		"actor_id": ev.ActorId,
-		"payload":  base64.StdEncoding.EncodeToString(data),
-	})
+	payload, err := json.Marshal(realtimeEnvelope(&ev, data))
 	if err != nil {
 		return
 	}
@@ -214,4 +203,56 @@ func (d *diContainer) forwardRealtime(data []byte) {
 		return
 	}
 	d.Hub().Broadcast(payload)
+}
+
+func realtimeEnvelope(ev *eventsv1.ChatRealtimeEvent, raw []byte) map[string]any {
+	out := map[string]any{
+		"type":     "chat.realtime",
+		"event_id": ev.EventId,
+		"chat_id":  ev.ChatId,
+		"actor_id": ev.ActorId,
+		"payload":  base64.StdEncoding.EncodeToString(raw),
+	}
+	switch {
+	case ev.GetMessageCreated() != nil:
+		mc := ev.GetMessageCreated()
+		out["event"] = "message_created"
+		msg := map[string]any{
+			"message_id":     mc.GetMessageId(),
+			"sender_id":      mc.GetSenderId(),
+			"text":           mc.GetText(),
+			"attachment_ids": mc.GetAttachmentIds(),
+			"chat_id":        ev.GetChatId(),
+		}
+		if mc.GetSendAt() != nil {
+			msg["send_at"] = mc.GetSendAt().AsTime().UTC().Format(time.RFC3339Nano)
+		}
+		out["message"] = msg
+	case ev.GetMessageEdited() != nil:
+		me := ev.GetMessageEdited()
+		out["event"] = "message_edited"
+		msg := map[string]any{
+			"message_id": me.GetMessageId(),
+			"text":       me.GetText(),
+		}
+		if me.GetUpdatedAt() != nil {
+			msg["updated_at"] = me.GetUpdatedAt().AsTime().UTC().Format(time.RFC3339Nano)
+		}
+		out["message"] = msg
+	case ev.GetMessageDeleted() != nil:
+		out["event"] = "message_deleted"
+		out["message"] = map[string]any{"message_id": ev.GetMessageDeleted().GetMessageId()}
+	case ev.GetMessagePinned() != nil:
+		mp := ev.GetMessagePinned()
+		out["event"] = "message_pinned"
+		out["message"] = map[string]any{
+			"message_id": mp.GetMessageId(),
+			"is_pinned":  mp.GetIsPinned(),
+		}
+	case ev.GetMemberChanged() != nil:
+		out["event"] = "member_changed"
+	case ev.GetReceiptRead() != nil:
+		out["event"] = "receipt_read"
+	}
+	return out
 }

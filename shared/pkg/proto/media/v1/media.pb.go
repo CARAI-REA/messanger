@@ -7,6 +7,7 @@
 package mediav1
 
 import (
+	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -398,7 +399,7 @@ var File_media_v1_media_proto protoreflect.FileDescriptor
 
 const file_media_v1_media_proto_rawDesc = "" +
 	"\n" +
-	"\x14media/v1/media.proto\x12\bmedia.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"b\n" +
+	"\x14media/v1/media.proto\x12\bmedia.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"b\n" +
 	"\x11InitUploadRequest\x12\x1a\n" +
 	"\bfilename\x18\x01 \x01(\tR\bfilename\x12\x12\n" +
 	"\x04mime\x18\x02 \x01(\tR\x04mime\x12\x1d\n" +
@@ -423,14 +424,14 @@ const file_media_v1_media_proto_rawDesc = "" +
 	"\x06status\x18\x05 \x01(\tR\x06status\x12\x17\n" +
 	"\aget_url\x18\x06 \x01(\tR\x06getUrl\x129\n" +
 	"\n" +
-	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt2\x98\x02\n" +
-	"\fMediaService\x12G\n" +
+	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt2\xbd\x03\n" +
+	"\fMediaService\x12i\n" +
 	"\n" +
-	"InitUpload\x12\x1b.media.v1.InitUploadRequest\x1a\x1c.media.v1.InitUploadResponse\x12A\n" +
-	"\x0eCompleteUpload\x12\x1f.media.v1.CompleteUploadRequest\x1a\x0e.media.v1.File\x123\n" +
-	"\aGetFile\x12\x18.media.v1.GetFileRequest\x1a\x0e.media.v1.File\x12G\n" +
+	"InitUpload\x12\x1b.media.v1.InitUploadRequest\x1a\x1c.media.v1.InitUploadResponse\" \x82\xd3\xe4\x93\x02\x1a:\x01*\"\x15/api/v1/media/uploads\x12v\n" +
+	"\x0eCompleteUpload\x12\x1f.media.v1.CompleteUploadRequest\x1a\x0e.media.v1.File\"3\x82\xd3\xe4\x93\x02-:\x01*\"(/api/v1/media/uploads/{file_id}:complete\x12Z\n" +
+	"\aGetFile\x12\x18.media.v1.GetFileRequest\x1a\x0e.media.v1.File\"%\x82\xd3\xe4\x93\x02\x1f\x12\x1d/api/v1/media/files/{file_id}\x12n\n" +
 	"\n" +
-	"DeleteFile\x12\x1b.media.v1.DeleteFileRequest\x1a\x1c.media.v1.DeleteFileResponseBBZ@github.com/CARAI-REA/messanger/shared/pkg/proto/media/v1;mediav1b\x06proto3"
+	"DeleteFile\x12\x1b.media.v1.DeleteFileRequest\x1a\x1c.media.v1.DeleteFileResponse\"%\x82\xd3\xe4\x93\x02\x1f*\x1d/api/v1/media/files/{file_id}BBZ@github.com/CARAI-REA/messanger/shared/pkg/proto/media/v1;mediav1b\x06proto3"
 
 var (
 	file_media_v1_media_proto_rawDescOnce sync.Once

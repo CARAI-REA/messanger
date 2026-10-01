@@ -41,13 +41,22 @@ else
 fi
 
 EMAIL="smoke_$(date +%s)@example.com"
+UNAME="smoke_$(date +%s)"
 PASS="password123"
+PEER_EMAIL="smoke_peer_$(date +%s)@example.com"
+PEER_UNAME="peer_$(date +%s)"
 
 echo "-- Create user --"
-CREATE_OUT=$(grpcurl -plaintext -d "{\"user_info\":{\"name\":\"Smoke\",\"email\":\"$EMAIL\"},\"password\":\"$PASS\",\"password_confirm\":\"$PASS\"}" \
+CREATE_OUT=$(grpcurl -plaintext -d "{\"user_info\":{\"name\":\"Smoke\",\"email\":\"$EMAIL\",\"username\":\"$UNAME\"},\"password\":\"$PASS\",\"password_confirm\":\"$PASS\"}" \
   localhost:50051 user.v1.UserService/Create)
 echo "$CREATE_OUT"
 USER_ID=$(echo "$CREATE_OUT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('id',0))")
+
+echo "-- Create peer --"
+PEER_OUT=$(grpcurl -plaintext -d "{\"user_info\":{\"name\":\"Peer\",\"email\":\"$PEER_EMAIL\",\"username\":\"$PEER_UNAME\"},\"password\":\"$PASS\",\"password_confirm\":\"$PASS\"}" \
+  localhost:50051 user.v1.UserService/Create)
+PEER_ID=$(echo "$PEER_OUT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('id',0))")
+echo "OK  peer_id=$PEER_ID"
 
 echo "-- Login --"
 LOGIN_OUT=$(grpcurl -plaintext -d "{\"email\":\"$EMAIL\",\"password\":\"$PASS\"}" \
@@ -60,11 +69,11 @@ if [[ -z "$ACCESS" ]]; then
 fi
 echo "OK  got access token (user_id=$USER_ID)"
 
-echo "-- Create chat --"
+echo "-- GetOrCreateDirect --"
 CHAT_OUT=$(grpcurl -plaintext \
   -H "authorization: Bearer $ACCESS" \
-  -d "{\"chat_info\":{\"name\":\"smoke-chat\",\"description\":\"smoke\",\"user_ids\":[$USER_ID]}}" \
-  localhost:50052 chat.v1.ChatService/CreateChat)
+  -d "{\"peer_user_id\":$PEER_ID}" \
+  localhost:50052 chat.v1.ChatService/GetOrCreateDirectChat)
 CHAT_ID=$(echo "$CHAT_OUT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('chatId',0))")
 echo "OK  chat_id=$CHAT_ID"
 

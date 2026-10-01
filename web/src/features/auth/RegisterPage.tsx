@@ -4,10 +4,13 @@ import { register } from '@/api/auth'
 import { useAuthStore } from '@/store/authStore'
 import type { ApiError } from '@/api/http'
 
+const USERNAME_RE = /^[a-zA-Z][a-zA-Z0-9_]{2,31}$/
+
 export function RegisterPage() {
   const navigate = useNavigate()
   const setSession = useAuthStore((s) => s.setSession)
   const [name, setName] = useState('')
+  const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -16,9 +19,14 @@ export function RegisterPage() {
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
     setError('')
+    const u = username.trim().replace(/^@/, '')
+    if (!USERNAME_RE.test(u)) {
+      setError('Username: 3–32 chars, start with a letter, only letters/digits/_')
+      return
+    }
     setLoading(true)
     try {
-      const res = await register(name.trim(), email.trim(), password)
+      const res = await register(name.trim(), u, email.trim(), password)
       setSession(res.accessToken, res.refreshToken, res.userId)
       navigate('/', { replace: true })
     } catch (err) {
@@ -43,6 +51,16 @@ export function RegisterPage() {
             <input value={name} onChange={(e) => setName(e.target.value)} required />
           </label>
           <label>
+            Username
+            <input
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="@ivan"
+              autoComplete="username"
+              required
+            />
+          </label>
+          <label>
             Email
             <input
               type="email"
@@ -59,7 +77,7 @@ export function RegisterPage() {
               autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              minLength={6}
+              minLength={8}
               required
             />
           </label>

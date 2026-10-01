@@ -205,7 +205,7 @@ func (h *Handler) writePump(c *hub.Client) {
 				_ = c.Conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
-			if err := c.Conn.WriteMessage(websocket.BinaryMessage, msg); err != nil {
+			if err := c.Conn.WriteMessage(websocket.TextMessage, msg); err != nil {
 				return
 			}
 			metrics.MessagesTotal.WithLabelValues("out").Inc()
@@ -220,8 +220,9 @@ func (h *Handler) writePump(c *hub.Client) {
 }
 
 type inbound struct {
-	Type   string `json:"type"`
-	ChatID int64  `json:"chat_id"`
+	Type    string  `json:"type"`
+	ChatID  int64   `json:"chat_id"`
+	UserIDs []int64 `json:"user_ids"`
 }
 
 func (h *Handler) readPump(ctx context.Context, c *hub.Client) {
@@ -274,6 +275,26 @@ func (h *Handler) readPump(ctx context.Context, c *hub.Client) {
 					"user_id": c.UserID,
 				})
 				h.hub.SendToChat(msg.ChatID, payload)
+			}
+		case "presence.subscribe":
+			ids := msg.UserIDs
+			if len(ids) > 100 {
+				ids = ids[:100]
+			}
+			online, err := h.presence.AreOnline(ids)
+			if err == nil {
+				users := map[string]bool{}
+				for id, ok := range online {
+					users[strconv.FormatInt(id, 10)] = ok
+				}
+				payload, _ := json.Marshal(map[string]any{
+					"type":  "presence",
+					"users": users,
+				})
+				select {
+				case c.Send <- payload:
+				default:
+				}
 			}
 		case "ping":
 			_ = h.presence.Heartbeat(c.UserID)

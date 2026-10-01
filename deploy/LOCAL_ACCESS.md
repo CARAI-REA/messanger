@@ -35,3 +35,5 @@ task up-web
 ```
 
 Dev without Docker: `cd web && npm install && npm run dev` (Vite proxies to localhost Envoy/Gateway).
+
+**Usernames:** register with `@handle` (3–32 chars, starts with a letter). Search people / open DMs by username; create groups with multiple members from the ✎ menu.

@@ -24,6 +24,7 @@ func main() {
 	chatAddr := envOr("CHAT_GRPC", "localhost:50052")
 	wsURL := envOr("WS_URL", "ws://localhost:8082/ws")
 	email := fmt.Sprintf("e2e_%d@example.com", time.Now().UnixNano())
+	uname := fmt.Sprintf("e2e_%d", time.Now().UnixNano()%100000000)
 	pass := "password123"
 
 	mustHTTP("http://localhost:8082/healthz")
@@ -43,13 +44,24 @@ func main() {
 	chat := chatv1.NewChatServiceClient(cconn)
 
 	created, err := user.Create(uctx, &userv1.CreateRequest{
-		UserInfo:        &userv1.UserInfo{Name: "e2e", Email: email},
+		UserInfo:        &userv1.UserInfo{Name: "e2e", Email: email, Username: uname},
 		Password:        pass,
 		PasswordConfirm: pass,
 	})
 	must(err)
 	uid := created.GetId()
 	fmt.Printf("user=%d\n", uid)
+
+	peerEmail := fmt.Sprintf("e2e_peer_%d@example.com", time.Now().UnixNano())
+	peerUname := fmt.Sprintf("peer_%d", time.Now().UnixNano()%100000000)
+	peer, err := user.Create(uctx, &userv1.CreateRequest{
+		UserInfo:        &userv1.UserInfo{Name: "peer", Email: peerEmail, Username: peerUname},
+		Password:        pass,
+		PasswordConfirm: pass,
+	})
+	must(err)
+	peerID := peer.GetId()
+	fmt.Printf("peer=%d\n", peerID)
 
 	login, err := auth.Login(uctx, &authv1.LoginRequest{Email: email, Password: pass})
 	must(err)
@@ -59,8 +71,8 @@ func main() {
 	}
 
 	authCtx := metadata.NewOutgoingContext(uctx, metadata.Pairs("authorization", "Bearer "+access))
-	chatResp, err := chat.CreateChat(authCtx, &chatv1.CreateChatRequest{
-		ChatInfo: &chatv1.ChatInfo{Name: "e2e", Description: "e2e", UserIds: []int64{uid}},
+	chatResp, err := chat.GetOrCreateDirectChat(authCtx, &chatv1.GetOrCreateDirectChatRequest{
+		PeerUserId: peerID,
 	})
 	must(err)
 	chatID := chatResp.GetChatId()

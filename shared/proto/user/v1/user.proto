@@ -21,6 +21,21 @@ service UserService {
       get: "/api/v1/users/{id}"
     };
   }
+  rpc GetMe(google.protobuf.Empty) returns (GetResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/users/me"
+    };
+  }
+  rpc GetByUsername(GetByUsernameRequest) returns (GetResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/users/by-username/{username}"
+    };
+  }
+  rpc SearchUsers(SearchUsersRequest) returns (SearchUsersResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/users:search"
+    };
+  }
   rpc Update(UpdateRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {
       patch: "/api/v1/users/me"
@@ -45,6 +60,7 @@ service UserService {
 message UserInfo {
   string name = 1;
   string email = 2;
+  string username = 3;
 }
 
 message User {
@@ -52,6 +68,7 @@ message User {
   UserInfo user_info = 2;
   google.protobuf.Timestamp created_at = 3;
   google.protobuf.Timestamp updated_at = 4;
+  string avatar_file_id = 5;
 }
 
 message CreateRequest {
@@ -68,13 +85,28 @@ message GetRequest {
   int64 id = 1;
 }
 
+message GetByUsernameRequest {
+  string username = 1;
+}
+
 message GetResponse {
   User user = 1;
+}
+
+message SearchUsersRequest {
+  string query = 1;
+  int32 limit = 2;
+}
+
+message SearchUsersResponse {
+  repeated User users = 1;
 }
 
 message UpdateRequest {
   google.protobuf.StringValue name = 1;
   google.protobuf.StringValue email = 2;
+  google.protobuf.StringValue username = 3;
+  google.protobuf.StringValue avatar_file_id = 4;
 }
 
 message UpdatePasswordRequest {
