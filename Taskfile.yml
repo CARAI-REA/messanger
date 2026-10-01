@@ -1,0 +1,123 @@
+version: '3'
+
+vars:
+  GO_VERSION: '1.25'
+  BIN_DIR: '{{.ROOT_DIR}}/bin'
+  BUF: '{{.BIN_DIR}}/buf'
+  ENVSUBST: '{{.BIN_DIR}}/envsubst'
+  ENVDIR: '{{.ROOT_DIR}}/deploy/env'
+  MODULES: platform,shared,user,auth,chat,gateway,media,search,notify
+  SERVICES: core,user,auth,chat,gateway,media,search,notify,envoy,observability
+
+tasks:
+  proto:gen:
+    desc: Generate protobuf code
+    cmds:
+      - |
+        export PATH="{{.BIN_DIR}}:$PATH"
+        cd shared/proto && {{.BUF}} dep update && {{.BUF}} generate
+
+  proto:descriptor:
+    desc: Build Envoy gRPC-JSON FileDescriptorSet
+    cmds:
+      - |
+        export PATH="{{.BIN_DIR}}:$PATH"
+        mkdir -p deploy/envoy
+        cd shared/proto && {{.BUF}} dep update && {{.BUF}} build -o ../../deploy/envoy/messanger_descriptor.pb
+
+  env:generate:
+    desc: Generate compose .env files from templates
+    cmds:
+      - SERVICES={{.SERVICES}} ENV_SUBST={{.ENVSUBST}} {{.ENVDIR}}/generate-env.sh
+
+  up-core:
+    deps: [env:generate]
+    cmds:
+      - docker compose -f deploy/compose/core/docker-compose.yml --env-file deploy/compose/core/.env up -d --build
+
+  up-user:
+    deps: [env:generate]
+    cmds:
+      - docker compose -f deploy/compose/user/docker-compose.yml --env-file deploy/compose/user/.env up -d --build
+
+  up-auth:
+    deps: [env:generate]
+    cmds:
+      - docker compose -f deploy/compose/auth/docker-compose.yml --env-file deploy/compose/auth/.env up -d --build
+
+  up-chat:
+    deps: [env:generate]
+    cmds:
+      - docker compose -f deploy/compose/chat/docker-compose.yml --env-file deploy/compose/chat/.env up -d --build
+
+  up-gateway:
+    deps: [env:generate]
+    cmds:
+      - docker compose -f deploy/compose/gateway/docker-compose.yml --env-file deploy/compose/gateway/.env up -d --build
+
+  up-gateway-scaled:
+    deps: [env:generate]
+    cmds:
+      - docker compose -f deploy/compose/gateway/docker-compose.yml --env-file deploy/compose/gateway/.env up -d --build --scale gateway=2
+
+  up-media:
+    deps: [env:generate]
+    cmds:
+      - docker compose -f deploy/compose/media/docker-compose.yml --env-file deploy/compose/media/.env up -d --build
+
+  up-search:
+    deps: [env:generate]
+    cmds:
+      - docker compose -f deploy/compose/search/docker-compose.yml --env-file deploy/compose/search/.env up -d --build
+
+  up-notify:
+    deps: [env:generate]
+    cmds:
+      - docker compose -f deploy/compose/notify/docker-compose.yml --env-file deploy/compose/notify/.env up -d --build
+
+  up-envoy:
+    deps: [env:generate]
+    cmds:
+      - docker compose -f deploy/compose/envoy/docker-compose.yml --env-file deploy/compose/envoy/.env up -d --build
+
+  up-observability:
+    deps: [env:generate]
+    cmds:
+      - docker compose -f deploy/compose/observability/docker-compose.yml --env-file deploy/compose/observability/.env up -d --build
+
+  up-all:
+    cmds:
+      - task: up-core
+      - task: up-user
+      - task: up-auth
+      - task: up-chat
+      - task: up-media
+      - task: up-search
+      - task: up-notify
+      - task: up-gateway
+      - task: up-envoy
+      - task: up-observability
+
+  down-all:
+    cmds:
+      - |
+        for s in observability envoy gateway notify search media chat auth user core; do
+          docker compose -f deploy/compose/$s/docker-compose.yml --env-file deploy/compose/$s/.env down || true
+        done
+
+  smoke:
+    cmds:
+      - bash scripts/smoke/run_all.sh
+
+  e2e:
+    desc: Full-stack Go e2e (login → chat → WS → idempotent send)
+    cmds:
+      - (cd scripts/e2e_full_stack && go run .)
+
+  build:
+    cmds:
+      - |
+        for m in user auth chat gateway media search notify; do
+          echo "Building $m..."
+          (cd $m && go build -o /dev/null ./cmd/)
+        done

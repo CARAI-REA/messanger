@@ -1,0 +1,70 @@
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.cursor/
+
+# --- Go build / test ---
+bin/
+dist/
+tmp/
+*.exe
+*.test
+*.out
+*.prof
+*.pprof
+coverage.out
+coverage.html
+*.coverprofile
+__debug_bin*
+debug
+vendor/
+**/vendor/
+
+# --- Node (if any tooling) ---
+node_modules/
+
+# --- Env / secrets (never commit real values) ---
+.env
+.env.*
+!.env.template
+!**/.env.template
+!deploy/env/.env.template
+!deploy/env/.env.production.example
+deploy/env/.env
+deploy/env/.env.production
+deploy/compose/**/.env
+deploy/k8s/*-secrets.local.yaml
+deploy/k8s/00-namespace-secrets.local.yaml
+deploy/SECRETS.local.md
+*.local.yaml
+*.local.yml
+*.pem
+*.key
+*.p12
+*.pfx
+**/fcm.json
+**/credentials.json
+**/service-account*.json
+
+# --- Local junk / reference copies (not this messanger) ---
+callService/
+VKS/
+ilya/
+**/callService/
+.colima/
+*.log
+*.bak
+*.tmp
+*.orig
+.cache/
+
+# --- Proto / generated noise (keep intentional descriptors tracked) ---
+# deploy/envoy/*.pb is intentionally committed for Envoy; do not ignore.
+
+# --- Task / tooling caches ---
+.task/

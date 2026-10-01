@@ -1,0 +1,84 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "title": "Outbox pending",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        { "expr": "outbox_pending", "legendFormat": "{{service}}", "refId": "A" }
+      ]
+    },
+    {
+      "title": "Outbox publish errors",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        { "expr": "sum(rate(outbox_publish_errors_total[5m])) by (service, stage)", "legendFormat": "{{service}}/{{stage}}", "refId": "A" }
+      ]
+    },
+    {
+      "title": "Gateway WS connections",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        { "expr": "gateway_ws_connections", "legendFormat": "connections", "refId": "A" }
+      ]
+    },
+    {
+      "title": "Gateway WS messages / disconnects / fanout errors",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [
+        { "expr": "sum(rate(gateway_ws_messages_total[5m]))", "legendFormat": "messages", "refId": "A" },
+        { "expr": "sum(rate(gateway_ws_disconnects_total[5m]))", "legendFormat": "disconnects", "refId": "B" },
+        { "expr": "sum(rate(gateway_fanout_errors_total[5m]))", "legendFormat": "fanout_errors", "refId": "C" }
+      ]
+    },
+    {
+      "title": "Auth gRPC QPS",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "targets": [
+        { "expr": "sum(rate(auth_grpc_requests_total[5m])) by (method, code)", "legendFormat": "{{method}} {{code}}", "refId": "A" }
+      ]
+    },
+    {
+      "title": "Notify push sends",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "targets": [
+        { "expr": "sum(rate(notify_push_sent_total[5m])) by (provider, result)", "legendFormat": "{{provider}}/{{result}}", "refId": "A" }
+      ]
+    },
+    {
+      "title": "Scrape up",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 24, "x": 0, "y": 24 },
+      "targets": [
+        { "expr": "up", "legendFormat": "{{job}}", "refId": "A" }
+      ]
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": ["messanger"],
+  "templating": { "list": [] },
+  "time": { "from": "now-1h", "to": "now" },
+  "timezone": "browser",
+  "title": "Messanger",
+  "uid": "messanger-overview",
+  "version": 2
+}

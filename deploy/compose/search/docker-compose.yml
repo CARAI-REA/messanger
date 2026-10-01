@@ -1,0 +1,22 @@
+services:
+  search:
+    build:
+      context: ../../..
+      dockerfile: deploy/docker/Dockerfile.search
+    container_name: search
+    env_file:
+      - .env
+    environment:
+      GRPC_HOST: 0.0.0.0
+      OPENSEARCH_URL: http://opensearch:9200
+      KAFKA_BROKERS: kafka:29092
+    ports:
+      - "${GRPC_PORT}:${GRPC_PORT}"
+      - "${METRICS_PORT}:${METRICS_PORT}"
+    restart: unless-stopped
+    networks:
+      - messanger-net
+
+networks:
+  messanger-net:
+    external: true

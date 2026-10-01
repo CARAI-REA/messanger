@@ -1,0 +1,32 @@
+-- +goose Up
+CREATE TABLE IF NOT EXISTS users (
+  id BIGSERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  email TEXT NOT NULL UNIQUE,
+  password TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS password_change_logs (
+  id BIGSERIAL PRIMARY KEY,
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  changed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  ip TEXT NOT NULL DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS outbox (
+  id BIGSERIAL PRIMARY KEY,
+  topic TEXT NOT NULL,
+  partition_key TEXT NOT NULL,
+  payload BYTEA NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  published_at TIMESTAMPTZ NULL
+);
+
+CREATE INDEX IF NOT EXISTS outbox_pending_idx ON outbox (id) WHERE published_at IS NULL;
+
+-- +goose Down
+DROP TABLE IF EXISTS outbox;
+DROP TABLE IF EXISTS password_change_logs;
+DROP TABLE IF EXISTS users;

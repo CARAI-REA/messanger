@@ -1,0 +1,97 @@
+package config
+
+import (
+	"fmt"
+	"os"
+
+	"github.com/CARAI-REA/messanger/platform/pkg/prodguard"
+	"github.com/joho/godotenv"
+
+	"notify/internal/config/env"
+)
+
+var appConfig *config
+
+type config struct {
+	App      AppEnvConfig
+	Logger   LoggerConfig
+	GRPC     GRPCConfig
+	Postgres PostgresConfig
+	JWT      JWTConfig
+	Metrics  MetricsConfig
+	Kafka    KafkaConfig
+	Push     PushConfig
+	Redis    RedisConfig
+}
+
+func Load(path ...string) error {
+	err := godotenv.Load(path...)
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	appCfg, err := env.NewAppConfig()
+	if err != nil {
+		return err
+	}
+	loggerCfg, err := env.NewLoggerConfig()
+	if err != nil {
+		return err
+	}
+	grpcCfg, err := env.NewGRPCConfig()
+	if err != nil {
+		return err
+	}
+	postgresCfg, err := env.NewPostgresConfig()
+	if err != nil {
+		return err
+	}
+	jwtCfg, err := env.NewJWTConfig()
+	if err != nil {
+		return err
+	}
+	metricsCfg, err := env.NewMetricsConfig()
+	if err != nil {
+		return err
+	}
+	kafkaCfg, err := env.NewKafkaConfig()
+	if err != nil {
+		return err
+	}
+	pushCfg, err := env.NewPushConfig()
+	if err != nil {
+		return err
+	}
+	redisCfg, err := env.NewRedisConfig()
+	if err != nil {
+		return err
+	}
+	appConfig = &config{
+		App: appCfg, Logger: loggerCfg, GRPC: grpcCfg, Postgres: postgresCfg,
+		JWT: jwtCfg, Metrics: metricsCfg, Kafka: kafkaCfg, Push: pushCfg, Redis: redisCfg,
+	}
+	return appConfig.ValidateProduction()
+}
+
+func AppConfig() *config { return appConfig }
+
+func (c *config) ValidateProduction() error {
+	if c == nil || c.App == nil {
+		return fmt.Errorf("config is not loaded")
+	}
+	if !prodguard.IsProduction(c.App.Env()) {
+		return nil
+	}
+	checks := []error{
+		prodguard.ForbidWeakSecret("JWT_SECRET", c.JWT.AuthTokenSecretKey()),
+		prodguard.ForbidDisabledSSL("POSTGRES_SSL_MODE", c.Postgres.SSLMode()),
+	}
+	if c.Redis != nil && c.Redis.Enabled() {
+		checks = append(checks, prodguard.RequireNonEmpty("REDIS_PASSWORD", c.Redis.Password()))
+	}
+	for _, err := range checks {
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}

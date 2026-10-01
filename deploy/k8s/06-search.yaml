@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: search
+  namespace: messanger
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: search
+  template:
+    metadata:
+      labels:
+        app: search
+    spec:
+      containers:
+        - name: search
+          image: messanger/search:latest
+          ports:
+            - containerPort: 50054
+              name: grpc
+            - containerPort: 9106
+              name: metrics
+          envFrom:
+            - configMapRef:
+                name: messanger-config
+            - secretRef:
+                name: messanger-secrets
+          env:
+            - name: GRPC_HOST
+              value: "0.0.0.0"
+            - name: GRPC_PORT
+              value: "50054"
+            - name: METRICS_HOST
+              value: "127.0.0.1"
+            - name: METRICS_PORT
+              value: "9106"
+            - name: REDIS_HOST
+              value: redis
+            - name: KAFKA_BROKERS
+              value: kafka:9092
+          readinessProbe:
+            tcpSocket:
+              port: 50054
+            initialDelaySeconds: 5
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: search
+  namespace: messanger
+spec:
+  selector:
+    app: search
+  ports:
+    - name: grpc
+      port: 50054
+      targetPort: 50054

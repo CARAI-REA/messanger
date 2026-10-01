@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway
+  namespace: messanger
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gateway
+  template:
+    metadata:
+      labels:
+        app: gateway
+    spec:
+      containers:
+        - name: gateway
+          image: messanger/gateway:latest
+          ports:
+            - containerPort: 8082
+              name: http
+            - containerPort: 9104
+              name: metrics
+          envFrom:
+            - configMapRef:
+                name: messanger-config
+            - secretRef:
+                name: messanger-secrets
+          env:
+            - name: HTTP_HOST
+              value: "0.0.0.0"
+            - name: HTTP_PORT
+              value: "8082"
+            - name: METRICS_HOST
+              value: "127.0.0.1"
+            - name: METRICS_PORT
+              value: "9104"
+            - name: REDIS_HOST
+              value: redis
+            - name: KAFKA_BROKERS
+              value: kafka:9092
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8082
+            initialDelaySeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8082
+            initialDelaySeconds: 10
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "wget -q -O- --post-data='' http://127.0.0.1:8082/internal/drain || curl -s -X POST http://127.0.0.1:8082/internal/drain || true"]
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway
+  namespace: messanger
+spec:
+  selector:
+    app: gateway
+  ports:
+    - name: http
+      port: 8082
+      targetPort: 8082

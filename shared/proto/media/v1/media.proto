@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package media.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/CARAI-REA/messanger/shared/pkg/proto/media/v1;mediav1";
+
+service MediaService {
+  rpc InitUpload(InitUploadRequest) returns (InitUploadResponse) {
+    option (google.api.http) = { post: "/api/v1/media/uploads" body: "*" };
+  }
+  rpc CompleteUpload(CompleteUploadRequest) returns (File) {
+    option (google.api.http) = { post: "/api/v1/media/uploads/{file_id}:complete" body: "*" };
+  }
+  rpc GetFile(GetFileRequest) returns (File) {
+    option (google.api.http) = { get: "/api/v1/media/files/{file_id}" };
+  }
+  rpc DeleteFile(DeleteFileRequest) returns (DeleteFileResponse) {
+    option (google.api.http) = { delete: "/api/v1/media/files/{file_id}" };
+  }
+}
+
+message InitUploadRequest {
+  string filename = 1;
+  string mime = 2;
+  int64 size_bytes = 3;
+}
+
+message InitUploadResponse {
+  string file_id = 1;
+  string put_url = 2;
+}
+
+message CompleteUploadRequest { string file_id = 1; }
+message GetFileRequest { string file_id = 1; }
+message DeleteFileRequest { string file_id = 1; }
+message DeleteFileResponse {}
+
+message File {
+  string file_id = 1;
+  int64 owner_id = 2;
+  string mime = 3;
+  int64 size_bytes = 4;
+  string status = 5;
+  string get_url = 6;
+  google.protobuf.Timestamp created_at = 7;
+}

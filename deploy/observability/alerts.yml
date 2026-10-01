@@ -1,0 +1,58 @@
+groups:
+  - name: messanger
+    rules:
+      - alert: MessangerOutboxBacklog
+        expr: max(outbox_pending) by (service) > 100
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Outbox backlog on {{ $labels.service }} > 100"
+
+      - alert: MessangerOutboxPublishErrors
+        expr: sum(rate(outbox_publish_errors_total[5m])) by (service, stage) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Outbox publish errors {{ $labels.service }}/{{ $labels.stage }}"
+
+      - alert: MessangerSearchIndexErrors
+        expr: sum(rate(search_index_errors_total[5m])) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Search index errors elevated
+
+      - alert: MessangerAuthGRPCErrors
+        expr: sum(rate(auth_grpc_requests_total{code!="OK"}[5m])) by (method) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Auth gRPC errors on {{ $labels.method }}"
+
+      - alert: MessangerKafkaConsumerLag
+        expr: max(kafka_consumergroup_lag) by (consumergroup) > 1000
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Kafka lag for {{ $labels.consumergroup }}"
+
+      - alert: MessangerRedisDown
+        expr: up{job=~"auth|chat|gateway|notify"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Target {{ $labels.job }} is down (possible Redis/service outage)"
+
+      - alert: MessangerGatewayWSDrop
+        expr: abs(delta(gateway_ws_connections[5m])) > 1000
+        for: 5m
+        labels:
+          severity: info
+        annotations:
+          summary: Large gateway WS connection delta

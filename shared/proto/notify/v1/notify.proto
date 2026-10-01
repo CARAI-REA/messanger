@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package notify.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+
+option go_package = "github.com/CARAI-REA/messanger/shared/pkg/proto/notify/v1;notifyv1";
+
+service NotifyService {
+  rpc RegisterDevice(RegisterDeviceRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = { post: "/api/v1/notify/devices" body: "*" };
+  }
+  rpc UnregisterDevice(UnregisterDeviceRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = { delete: "/api/v1/notify/devices/{push_token}" };
+  }
+}
+
+message RegisterDeviceRequest {
+  string platform = 1;
+  string push_token = 2;
+}
+
+message UnregisterDeviceRequest {
+  string push_token = 1;
+}

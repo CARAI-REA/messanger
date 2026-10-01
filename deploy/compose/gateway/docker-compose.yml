@@ -1,0 +1,21 @@
+services:
+  gateway:
+    build:
+      context: ../../..
+      dockerfile: deploy/docker/Dockerfile.gateway
+    env_file:
+      - .env
+    environment:
+      HTTP_HOST: 0.0.0.0
+      REDIS_HOST: redis
+      CHAT_GRPC_ADDRESS: chat:50052
+    ports:
+      - "${HTTP_PORT}:${HTTP_PORT}"
+      - "${METRICS_PORT}:${METRICS_PORT}"
+    restart: unless-stopped
+    networks:
+      - messanger-net
+
+networks:
+  messanger-net:
+    external: true

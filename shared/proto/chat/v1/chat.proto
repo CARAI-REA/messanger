@@ -1,0 +1,115 @@
+syntax = "proto3";
+
+package chat.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/CARAI-REA/messanger/shared/pkg/proto/chat/v1;chatv1";
+
+service ChatService {
+  rpc CreateChat(CreateChatRequest) returns (CreateChatResponse) {
+    option (google.api.http) = { post: "/api/v1/chats" body: "*" };
+  }
+  rpc DeleteChat(DeleteChatRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = { delete: "/api/v1/chats/{chat_id}" };
+  }
+  rpc GetChat(GetChatRequest) returns (GetChatResponse) {
+    option (google.api.http) = { get: "/api/v1/chats/{chat_id}" };
+  }
+  rpc ListChats(ListChatsRequest) returns (ListChatsResponse) {
+    option (google.api.http) = { get: "/api/v1/chats" };
+  }
+  rpc ListChatIDs(ListChatIDsRequest) returns (ListChatIDsResponse) {
+    option (google.api.http) = { get: "/api/v1/chats:ids" };
+  }
+
+  rpc AddUser(AddUserRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = { post: "/api/v1/chats/{chat_id}/members" body: "*" };
+  }
+  rpc RemoveUser(RemoveUserRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = { delete: "/api/v1/chats/{chat_id}/members/{user_id}" };
+  }
+  rpc UpdateUserRole(UpdateUserRoleRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = { patch: "/api/v1/chats/{chat_id}/members/{user_id}" body: "*" };
+  }
+
+  rpc SendMessage(SendMessageRequest) returns (SendMessageResponse) {
+    option (google.api.http) = { post: "/api/v1/chats/{chat_id}/messages" body: "*" };
+  }
+  rpc EditMessage(EditMessageRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = { patch: "/api/v1/messages/{message_id}" body: "*" };
+  }
+  rpc DeleteMessage(DeleteMessageRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = { delete: "/api/v1/messages/{message_id}" };
+  }
+  rpc PinMessage(PinMessageRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = { post: "/api/v1/messages/{message_id}:pin" body: "*" };
+  }
+  rpc ListMessages(ListMessagesRequest) returns (ListMessagesResponse) {
+    option (google.api.http) = { get: "/api/v1/chats/{chat_id}/messages" };
+  }
+
+  rpc MarkRead(MarkReadRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = { post: "/api/v1/chats/{chat_id}:read" body: "*" };
+  }
+  rpc GetUnreadCounts(GetUnreadCountsRequest) returns (GetUnreadCountsResponse) {
+    option (google.api.http) = { get: "/api/v1/chats:unread" };
+  }
+}
+
+enum Role {
+  ROLE_USER = 0;
+  ROLE_ADMIN = 1;
+  ROLE_OWNER = 2;
+}
+
+message ChatInfo {
+  string name = 1;
+  string description = 2;
+  repeated int64 user_ids = 3;
+}
+
+message Chat {
+  int64 chat_id = 1;
+  int64 owner_id = 2;
+  ChatInfo chat_info = 3;
+  google.protobuf.Timestamp last_message_at = 4;
+  int64 last_message_id = 5;
+  int64 unread_count = 6;
+}
+
+message Message {
+  int64 message_id = 1;
+  int64 sender_id = 2;
+  int64 chat_id = 3;
+  string text = 4;
+  bool is_pinned = 5;
+  google.protobuf.Timestamp send_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+  repeated string attachment_ids = 8;
+}
+
+message CreateChatRequest { ChatInfo chat_info = 1; }
+message CreateChatResponse { int64 chat_id = 1; }
+message DeleteChatRequest { int64 chat_id = 1; }
+message GetChatRequest { int64 chat_id = 1; }
+message GetChatResponse { Chat chat = 1; repeated int64 participant_ids = 2; }
+message ListChatsRequest { string cursor = 1; int32 limit = 2; }
+message ListChatsResponse { repeated Chat chats = 1; string next_cursor = 2; }
+message ListChatIDsRequest {}
+message ListChatIDsResponse { repeated int64 chat_ids = 1; }
+message AddUserRequest { int64 chat_id = 1; int64 user_id = 2; Role role = 3; }
+message RemoveUserRequest { int64 chat_id = 1; int64 user_id = 2; }
+message UpdateUserRoleRequest { int64 chat_id = 1; int64 user_id = 2; Role role = 3; }
+message SendMessageRequest { int64 chat_id = 1; string text = 2; string idempotency_key = 3; repeated string attachment_ids = 4; }
+message SendMessageResponse { int64 message_id = 1; }
+message EditMessageRequest { int64 message_id = 1; string text = 2; }
+message DeleteMessageRequest { int64 message_id = 1; }
+message PinMessageRequest { int64 message_id = 1; bool is_pinned = 2; }
+message ListMessagesRequest { int64 chat_id = 1; int64 before_id = 2; int32 limit = 3; }
+message ListMessagesResponse { repeated Message messages = 1; bool has_more = 2; }
+message MarkReadRequest { int64 chat_id = 1; int64 message_id = 2; }
+message GetUnreadCountsRequest { repeated int64 chat_ids = 1; }
+message GetUnreadCountsResponse { map<int64, int64> counts = 1; }

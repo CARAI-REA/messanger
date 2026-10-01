@@ -1,0 +1,15 @@
+FROM golang:1.25-alpine AS builder
+WORKDIR /src
+RUN apk add --no-cache ca-certificates
+COPY platform ./platform
+COPY shared ./shared
+COPY auth ./auth
+WORKDIR /src/auth
+RUN CGO_ENABLED=0 go build -mod=vendor -o /out/auth ./cmd
+
+FROM alpine:3.20
+RUN apk add --no-cache ca-certificates
+WORKDIR /app
+COPY --from=builder /out/auth /app/bin/auth
+EXPOSE 50050 9102
+ENTRYPOINT ["/app/bin/auth"]

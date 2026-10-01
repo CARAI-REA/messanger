@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth
+  namespace: messanger
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth
+  template:
+    metadata:
+      labels:
+        app: auth
+    spec:
+      containers:
+        - name: auth
+          image: messanger/auth:latest
+          ports:
+            - containerPort: 50050
+              name: grpc
+            - containerPort: 9102
+              name: metrics
+          envFrom:
+            - configMapRef:
+                name: messanger-config
+            - secretRef:
+                name: messanger-secrets
+          env:
+            - name: GRPC_HOST
+              value: "0.0.0.0"
+            - name: GRPC_PORT
+              value: "50050"
+            - name: METRICS_HOST
+              value: "127.0.0.1"
+            - name: METRICS_PORT
+              value: "9102"
+            - name: REDIS_HOST
+              value: redis
+            - name: KAFKA_BROKERS
+              value: kafka:9092
+          readinessProbe:
+            tcpSocket:
+              port: 50050
+            initialDelaySeconds: 5
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth
+  namespace: messanger
+spec:
+  selector:
+    app: auth
+  ports:
+    - name: grpc
+      port: 50050
+      targetPort: 50050

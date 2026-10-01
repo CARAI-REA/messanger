@@ -1,0 +1,41 @@
+# Production-like Compose overlay: do not publish internal gRPC to the host.
+# Usage:
+#   docker compose -f deploy/compose/user/docker-compose.yml -f deploy/compose/docker-compose.prod.yml up -d
+# Or via task with COMPOSE_FILE overlay.
+#
+# Public host ports remain: envoy:8080, gateway:8082 (and optional metrics on localhost only).
+# ValidateCredentials and other internal RPCs stay on the Docker network only.
+
+services:
+  user:
+    ports: !override
+      - "127.0.0.1:${METRICS_PORT}:${METRICS_PORT}"
+
+  auth:
+    ports: !override
+      - "127.0.0.1:${METRICS_PORT}:${METRICS_PORT}"
+
+  chat:
+    ports: !override
+      - "127.0.0.1:${METRICS_PORT}:${METRICS_PORT}"
+
+  media:
+    ports: !override
+      - "127.0.0.1:${METRICS_PORT}:${METRICS_PORT}"
+
+  search:
+    ports: !override
+      - "127.0.0.1:${METRICS_PORT}:${METRICS_PORT}"
+
+  notify:
+    ports: !override
+      - "127.0.0.1:${METRICS_PORT}:${METRICS_PORT}"
+
+  gateway:
+    ports: !override
+      - "${HTTP_PORT}:${HTTP_PORT}"
+      - "127.0.0.1:${METRICS_PORT}:${METRICS_PORT}"
+
+  envoy:
+    ports: !override
+      - "8080:8080"

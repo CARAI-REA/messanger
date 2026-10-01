@@ -1,0 +1,17 @@
+FROM golang:1.25-alpine AS builder
+WORKDIR /src
+RUN apk add --no-cache ca-certificates
+COPY platform ./platform
+COPY shared ./shared
+COPY chat ./chat
+WORKDIR /src/chat
+RUN CGO_ENABLED=0 go build -mod=vendor -o /out/chat ./cmd
+
+FROM alpine:3.20
+RUN apk add --no-cache ca-certificates
+WORKDIR /app
+COPY --from=builder /out/chat /app/bin/chat
+COPY chat/internal/migrations /app/internal/migrations
+ENV MIGRATION_DIRECTORY=/app/internal/migrations
+EXPOSE 50052 9103
+ENTRYPOINT ["/app/bin/chat"]

@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notify
+  namespace: messanger
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notify
+  template:
+    metadata:
+      labels:
+        app: notify
+    spec:
+      containers:
+        - name: notify
+          image: messanger/notify:latest
+          ports:
+            - containerPort: 50055
+              name: grpc
+            - containerPort: 9107
+              name: metrics
+          envFrom:
+            - configMapRef:
+                name: messanger-config
+            - secretRef:
+                name: messanger-secrets
+          env:
+            - name: GRPC_HOST
+              value: "0.0.0.0"
+            - name: GRPC_PORT
+              value: "50055"
+            - name: METRICS_HOST
+              value: "127.0.0.1"
+            - name: METRICS_PORT
+              value: "9107"
+            - name: REDIS_HOST
+              value: redis
+            - name: KAFKA_BROKERS
+              value: kafka:9092
+            - name: POSTGRES_HOST
+              value: postgres-notify
+            - name: POSTGRES_PORT
+              value: "5432"
+            - name: POSTGRES_DB
+              value: notify
+            - name: POSTGRES_USER
+              value: notify_user
+            - name: MIGRATION_DIRECTORY
+              value: /app/internal/migrations
+          readinessProbe:
+            tcpSocket:
+              port: 50055
+            initialDelaySeconds: 5
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notify
+  namespace: messanger
+spec:
+  selector:
+    app: notify
+  ports:
+    - name: grpc
+      port: 50055
+      targetPort: 50055

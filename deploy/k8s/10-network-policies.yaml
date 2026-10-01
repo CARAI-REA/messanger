@@ -1,0 +1,213 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: messanger
+spec:
+  podSelector: {}
+  policyTypes: ["Ingress"]
+---
+# Envoy may receive traffic from ingress controller / nginx edge.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-envoy-ingress
+  namespace: messanger
+spec:
+  podSelector:
+    matchLabels:
+      app: envoy
+  policyTypes: ["Ingress"]
+  ingress:
+    - ports:
+        - protocol: TCP
+          port: 8080
+---
+# Gateway WS: from envoy and from nginx/ingress edge labeled app=nginx (optional).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-gateway-ws
+  namespace: messanger
+spec:
+  podSelector:
+    matchLabels:
+      app: gateway
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: envoy
+        - podSelector:
+            matchLabels:
+              app: nginx
+      ports:
+        - protocol: TCP
+          port: 8082
+---
+# Internal gRPC: user accepts auth + gateway (and optionally other services).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-user-grpc
+  namespace: messanger
+spec:
+  podSelector:
+    matchLabels:
+      app: user
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: auth
+        - podSelector:
+            matchLabels:
+              app: envoy
+        - podSelector:
+            matchLabels:
+              app: gateway
+      ports:
+        - protocol: TCP
+          port: 50051
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-auth-grpc
+  namespace: messanger
+spec:
+  podSelector:
+    matchLabels:
+      app: auth
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: envoy
+        - podSelector:
+            matchLabels:
+              app: gateway
+      ports:
+        - protocol: TCP
+          port: 50050
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-chat-grpc
+  namespace: messanger
+spec:
+  podSelector:
+    matchLabels:
+      app: chat
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: envoy
+        - podSelector:
+            matchLabels:
+              app: gateway
+      ports:
+        - protocol: TCP
+          port: 50052
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-media-grpc
+  namespace: messanger
+spec:
+  podSelector:
+    matchLabels:
+      app: media
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: envoy
+        - podSelector:
+            matchLabels:
+              app: gateway
+      ports:
+        - protocol: TCP
+          port: 50053
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-search-grpc
+  namespace: messanger
+spec:
+  podSelector:
+    matchLabels:
+      app: search
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: envoy
+        - podSelector:
+            matchLabels:
+              app: gateway
+      ports:
+        - protocol: TCP
+          port: 50054
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-notify-grpc
+  namespace: messanger
+spec:
+  podSelector:
+    matchLabels:
+      app: notify
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: envoy
+        - podSelector:
+            matchLabels:
+              app: gateway
+      ports:
+        - protocol: TCP
+          port: 50055
+---
+# Metrics scrape from prometheus only.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-metrics-from-prometheus
+  namespace: messanger
+spec:
+  podSelector: {}
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: prometheus
+      ports:
+        - protocol: TCP
+          port: 9101
+        - protocol: TCP
+          port: 9102
+        - protocol: TCP
+          port: 9103
+        - protocol: TCP
+          port: 9104
+        - protocol: TCP
+          port: 9105
+        - protocol: TCP
+          port: 9106
+        - protocol: TCP
+          port: 9107

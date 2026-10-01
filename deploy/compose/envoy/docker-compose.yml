@@ -1,0 +1,18 @@
+services:
+  envoy:
+    image: envoyproxy/envoy:v1.31-latest
+    container_name: envoy
+    volumes:
+      - ./envoy.yaml:/etc/envoy/envoy.yaml:ro
+      - ../../envoy/messanger_descriptor.pb:/etc/envoy/messanger_descriptor.pb:ro
+    ports:
+      - "${ENVOY_HTTP_PORT}:8080"
+      - "${ENVOY_ADMIN_PORT}:9901"
+    command: ["-c", "/etc/envoy/envoy.yaml"]
+    restart: unless-stopped
+    networks:
+      - messanger-net
+
+networks:
+  messanger-net:
+    external: true

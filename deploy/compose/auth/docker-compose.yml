@@ -1,0 +1,22 @@
+services:
+  auth:
+    build:
+      context: ../../..
+      dockerfile: deploy/docker/Dockerfile.auth
+    container_name: auth
+    env_file:
+      - .env
+    environment:
+      GRPC_HOST: 0.0.0.0
+      REDIS_HOST: redis
+      USER_GRPC_ADDRESS: user:50051
+    ports:
+      - "${GRPC_PORT}:${GRPC_PORT}"
+      - "${METRICS_PORT}:${METRICS_PORT}"
+    restart: unless-stopped
+    networks:
+      - messanger-net
+
+networks:
+  messanger-net:
+    external: true

@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: media
+  namespace: messanger
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: media
+  template:
+    metadata:
+      labels:
+        app: media
+    spec:
+      containers:
+        - name: media
+          image: messanger/media:latest
+          ports:
+            - containerPort: 50053
+              name: grpc
+            - containerPort: 9105
+              name: metrics
+          envFrom:
+            - configMapRef:
+                name: messanger-config
+            - secretRef:
+                name: messanger-secrets
+          env:
+            - name: GRPC_HOST
+              value: "0.0.0.0"
+            - name: GRPC_PORT
+              value: "50053"
+            - name: METRICS_HOST
+              value: "127.0.0.1"
+            - name: METRICS_PORT
+              value: "9105"
+            - name: REDIS_HOST
+              value: redis
+            - name: KAFKA_BROKERS
+              value: kafka:9092
+            - name: POSTGRES_HOST
+              value: postgres-media
+            - name: POSTGRES_PORT
+              value: "5432"
+            - name: POSTGRES_DB
+              value: media
+            - name: POSTGRES_USER
+              value: media_user
+            - name: MIGRATION_DIRECTORY
+              value: /app/internal/migrations
+          readinessProbe:
+            tcpSocket:
+              port: 50053
+            initialDelaySeconds: 5
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: media
+  namespace: messanger
+spec:
+  selector:
+    app: media
+  ports:
+    - name: grpc
+      port: 50053
+      targetPort: 50053

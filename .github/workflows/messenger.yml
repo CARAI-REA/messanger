@@ -1,0 +1,177 @@
+name: messenger
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: messenger-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GO_VERSION: "1.25.x"
+
+jobs:
+  unit:
+    name: Unit tests + build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: |
+            platform/go.sum
+            shared/go.sum
+            user/go.sum
+            auth/go.sum
+            chat/go.sum
+            gateway/go.sum
+            media/go.sum
+            search/go.sum
+            notify/go.sum
+      - name: Vendor modules
+        run: bash scripts/ci_vendor.sh
+      - name: Platform tests
+        run: cd platform && go test ./... -count=1
+      - name: Service unit tests
+        run: |
+          for m in user auth chat gateway media search notify; do
+            echo "== $m =="
+            (cd "$m" && go test -mod=vendor ./... -count=1 -short)
+          done
+      - name: Build services
+        run: |
+          for m in user auth chat gateway media search notify; do
+            (cd "$m" && go build -mod=vendor -o /dev/null ./cmd)
+          done
+
+  proto-lint:
+    name: Proto lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install buf
+        run: |
+          mkdir -p bin
+          BUF_VERSION=1.47.2
+          curl -sSL "https://github.com/bufbuild/buf/releases/download/v${BUF_VERSION}/buf-$(uname -s)-$(uname -m)" -o bin/buf
+          chmod +x bin/buf
+      - name: Buf lint + descriptor
+        run: |
+          cd shared/proto
+          ../../bin/buf dep update
+          ../../bin/buf lint
+          mkdir -p ../../deploy/envoy
+          ../../bin/buf build -o ../../deploy/envoy/messanger_descriptor.pb
+      - name: Upload descriptor artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: messanger-descriptor
+          path: deploy/envoy/messanger_descriptor.pb
+          if-no-files-found: error
+
+  integration:
+    name: Integration (testcontainers)
+    runs-on: ubuntu-latest
+    needs: [unit]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: |
+            chat/go.sum
+            gateway/go.sum
+            auth/go.sum
+      - name: Vendor modules
+        run: bash scripts/ci_vendor.sh
+      - name: Chat outbox (Postgres)
+        env:
+          TESTCONTAINERS_RYUK_DISABLED: "true"
+        run: (cd chat && go test -mod=vendor ./internal/repository/outbox/ -count=1 -run TestOutboxSkipLockedStagedPublish -timeout 10m)
+      - name: Gateway membership (Redis)
+        env:
+          TESTCONTAINERS_RYUK_DISABLED: "true"
+        run: (cd gateway && go test -mod=vendor ./internal/integration/ -count=1 -timeout 10m)
+      - name: Auth JWT contract
+        run: (cd auth && go test -mod=vendor ./internal/integration/ -count=1)
+
+  compose-e2e:
+    name: Compose e2e smoke
+    runs-on: ubuntu-latest
+    needs: [unit, proto-lint]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: |
+            platform/go.sum
+            shared/go.sum
+            user/go.sum
+            auth/go.sum
+            chat/go.sum
+            gateway/go.sum
+            media/go.sum
+            search/go.sum
+            notify/go.sum
+            scripts/e2e_full_stack/go.sum
+      - name: Install task + grpcurl + envsubst
+        run: |
+          sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b ./bin
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq gettext-base
+          go install github.com/fullstorydev/grpcurl/cmd/grpcurl@latest
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+      - name: Vendor + prepare env
+        run: |
+          bash scripts/ci_vendor.sh
+          chmod +x scripts/ci_prepare_env.sh
+          PATH="$PWD/bin:$PATH" bash scripts/ci_prepare_env.sh
+      - name: Ensure descriptor
+        run: |
+          if [[ ! -s deploy/envoy/messanger_descriptor.pb ]]; then
+            mkdir -p bin deploy/envoy
+            BUF_VERSION=1.47.2
+            curl -sSL "https://github.com/bufbuild/buf/releases/download/v${BUF_VERSION}/buf-$(uname -s)-$(uname -m)" -o bin/buf
+            chmod +x bin/buf
+            (cd shared/proto && ../../bin/buf dep update && ../../bin/buf build -o ../../deploy/envoy/messanger_descriptor.pb)
+          fi
+      - name: Compose up
+        run: |
+          ./bin/task up-all
+          for i in $(seq 1 60); do
+            curl -sf --max-time 2 http://127.0.0.1:8082/readyz >/dev/null && echo gateway_ready && break
+            sleep 5
+            [[ $i -eq 60 ]] && { echo "gateway not ready"; docker ps -a; exit 1; }
+          done
+      - name: Smoke
+        run: PATH="$PWD/bin:$(go env GOPATH)/bin:$PATH" ./bin/task smoke
+      - name: Go e2e
+        run: (cd scripts/e2e_full_stack && go run .)
+      - name: Tear down
+        if: always()
+        run: ./bin/task down-all || true
+
+  load-smoke:
+    name: k6 load smoke (optional gate)
+    runs-on: ubuntu-latest
+    needs: [compose-e2e]
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install k6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E4794030D05F1A2803C0C2CC4A2AA8
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq k6
+      - name: Skip without live stack
+        run: |
+          echo "Load against staging is a release checklist item."
+          echo "Local/CI compose load is best-effort; full baseline stays manual."
+          k6 version
