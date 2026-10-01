@@ -7,10 +7,12 @@
 package chatv1
 
 import (
+	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
+	wrapperspb "google.golang.org/protobuf/types/known/wrapperspb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -70,6 +72,55 @@ func (x Role) Number() protoreflect.EnumNumber {
 // Deprecated: Use Role.Descriptor instead.
 func (Role) EnumDescriptor() ([]byte, []int) {
 	return file_chat_v1_chat_proto_rawDescGZIP(), []int{0}
+}
+
+type ChatType int32
+
+const (
+	ChatType_CHAT_TYPE_UNSPECIFIED ChatType = 0
+	ChatType_CHAT_TYPE_DIRECT      ChatType = 1
+	ChatType_CHAT_TYPE_GROUP       ChatType = 2
+)
+
+// Enum value maps for ChatType.
+var (
+	ChatType_name = map[int32]string{
+		0: "CHAT_TYPE_UNSPECIFIED",
+		1: "CHAT_TYPE_DIRECT",
+		2: "CHAT_TYPE_GROUP",
+	}
+	ChatType_value = map[string]int32{
+		"CHAT_TYPE_UNSPECIFIED": 0,
+		"CHAT_TYPE_DIRECT":      1,
+		"CHAT_TYPE_GROUP":       2,
+	}
+)
+
+func (x ChatType) Enum() *ChatType {
+	p := new(ChatType)
+	*p = x
+	return p
+}
+
+func (x ChatType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ChatType) Descriptor() protoreflect.EnumDescriptor {
+	return file_chat_v1_chat_proto_enumTypes[1].Descriptor()
+}
+
+func (ChatType) Type() protoreflect.EnumType {
+	return &file_chat_v1_chat_proto_enumTypes[1]
+}
+
+func (x ChatType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ChatType.Descriptor instead.
+func (ChatType) EnumDescriptor() ([]byte, []int) {
+	return file_chat_v1_chat_proto_rawDescGZIP(), []int{1}
 }
 
 type ChatInfo struct {
@@ -133,15 +184,20 @@ func (x *ChatInfo) GetUserIds() []int64 {
 }
 
 type Chat struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ChatId        int64                  `protobuf:"varint,1,opt,name=chat_id,json=chatId,proto3" json:"chat_id,omitempty"`
-	OwnerId       int64                  `protobuf:"varint,2,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
-	ChatInfo      *ChatInfo              `protobuf:"bytes,3,opt,name=chat_info,json=chatInfo,proto3" json:"chat_info,omitempty"`
-	LastMessageAt *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=last_message_at,json=lastMessageAt,proto3" json:"last_message_at,omitempty"`
-	LastMessageId int64                  `protobuf:"varint,5,opt,name=last_message_id,json=lastMessageId,proto3" json:"last_message_id,omitempty"`
-	UnreadCount   int64                  `protobuf:"varint,6,opt,name=unread_count,json=unreadCount,proto3" json:"unread_count,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	ChatId             int64                  `protobuf:"varint,1,opt,name=chat_id,json=chatId,proto3" json:"chat_id,omitempty"`
+	OwnerId            int64                  `protobuf:"varint,2,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
+	ChatInfo           *ChatInfo              `protobuf:"bytes,3,opt,name=chat_info,json=chatInfo,proto3" json:"chat_info,omitempty"`
+	LastMessageAt      *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=last_message_at,json=lastMessageAt,proto3" json:"last_message_at,omitempty"`
+	LastMessageId      int64                  `protobuf:"varint,5,opt,name=last_message_id,json=lastMessageId,proto3" json:"last_message_id,omitempty"`
+	UnreadCount        int64                  `protobuf:"varint,6,opt,name=unread_count,json=unreadCount,proto3" json:"unread_count,omitempty"`
+	ChatType           ChatType               `protobuf:"varint,7,opt,name=chat_type,json=chatType,proto3,enum=chat.v1.ChatType" json:"chat_type,omitempty"`
+	LastMessagePreview string                 `protobuf:"bytes,8,opt,name=last_message_preview,json=lastMessagePreview,proto3" json:"last_message_preview,omitempty"`
+	ParticipantIds     []int64                `protobuf:"varint,9,rep,packed,name=participant_ids,json=participantIds,proto3" json:"participant_ids,omitempty"`
+	PeerUserId         int64                  `protobuf:"varint,10,opt,name=peer_user_id,json=peerUserId,proto3" json:"peer_user_id,omitempty"` // set for DIRECT: the other participant
+	AvatarFileId       string                 `protobuf:"bytes,11,opt,name=avatar_file_id,json=avatarFileId,proto3" json:"avatar_file_id,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *Chat) Reset() {
@@ -216,18 +272,54 @@ func (x *Chat) GetUnreadCount() int64 {
 	return 0
 }
 
+func (x *Chat) GetChatType() ChatType {
+	if x != nil {
+		return x.ChatType
+	}
+	return ChatType_CHAT_TYPE_UNSPECIFIED
+}
+
+func (x *Chat) GetLastMessagePreview() string {
+	if x != nil {
+		return x.LastMessagePreview
+	}
+	return ""
+}
+
+func (x *Chat) GetParticipantIds() []int64 {
+	if x != nil {
+		return x.ParticipantIds
+	}
+	return nil
+}
+
+func (x *Chat) GetPeerUserId() int64 {
+	if x != nil {
+		return x.PeerUserId
+	}
+	return 0
+}
+
+func (x *Chat) GetAvatarFileId() string {
+	if x != nil {
+		return x.AvatarFileId
+	}
+	return ""
+}
+
 type Message struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	MessageId     int64                  `protobuf:"varint,1,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
-	SenderId      int64                  `protobuf:"varint,2,opt,name=sender_id,json=senderId,proto3" json:"sender_id,omitempty"`
-	ChatId        int64                  `protobuf:"varint,3,opt,name=chat_id,json=chatId,proto3" json:"chat_id,omitempty"`
-	Text          string                 `protobuf:"bytes,4,opt,name=text,proto3" json:"text,omitempty"`
-	IsPinned      bool                   `protobuf:"varint,5,opt,name=is_pinned,json=isPinned,proto3" json:"is_pinned,omitempty"`
-	SendAt        *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=send_at,json=sendAt,proto3" json:"send_at,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	AttachmentIds []string               `protobuf:"bytes,8,rep,name=attachment_ids,json=attachmentIds,proto3" json:"attachment_ids,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	MessageId        int64                  `protobuf:"varint,1,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	SenderId         int64                  `protobuf:"varint,2,opt,name=sender_id,json=senderId,proto3" json:"sender_id,omitempty"`
+	ChatId           int64                  `protobuf:"varint,3,opt,name=chat_id,json=chatId,proto3" json:"chat_id,omitempty"`
+	Text             string                 `protobuf:"bytes,4,opt,name=text,proto3" json:"text,omitempty"`
+	IsPinned         bool                   `protobuf:"varint,5,opt,name=is_pinned,json=isPinned,proto3" json:"is_pinned,omitempty"`
+	SendAt           *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=send_at,json=sendAt,proto3" json:"send_at,omitempty"`
+	UpdatedAt        *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	AttachmentIds    []string               `protobuf:"bytes,8,rep,name=attachment_ids,json=attachmentIds,proto3" json:"attachment_ids,omitempty"`
+	ReplyToMessageId int64                  `protobuf:"varint,9,opt,name=reply_to_message_id,json=replyToMessageId,proto3" json:"reply_to_message_id,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *Message) Reset() {
@@ -314,6 +406,13 @@ func (x *Message) GetAttachmentIds() []string {
 		return x.AttachmentIds
 	}
 	return nil
+}
+
+func (x *Message) GetReplyToMessageId() int64 {
+	if x != nil {
+		return x.ReplyToMessageId
+	}
+	return 0
 }
 
 type CreateChatRequest struct {
@@ -404,6 +503,118 @@ func (x *CreateChatResponse) GetChatId() int64 {
 	return 0
 }
 
+type GetOrCreateDirectChatRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	PeerUserId    int64                  `protobuf:"varint,1,opt,name=peer_user_id,json=peerUserId,proto3" json:"peer_user_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetOrCreateDirectChatRequest) Reset() {
+	*x = GetOrCreateDirectChatRequest{}
+	mi := &file_chat_v1_chat_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetOrCreateDirectChatRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetOrCreateDirectChatRequest) ProtoMessage() {}
+
+func (x *GetOrCreateDirectChatRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_chat_v1_chat_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetOrCreateDirectChatRequest.ProtoReflect.Descriptor instead.
+func (*GetOrCreateDirectChatRequest) Descriptor() ([]byte, []int) {
+	return file_chat_v1_chat_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *GetOrCreateDirectChatRequest) GetPeerUserId() int64 {
+	if x != nil {
+		return x.PeerUserId
+	}
+	return 0
+}
+
+type UpdateChatRequest struct {
+	state         protoimpl.MessageState  `protogen:"open.v1"`
+	ChatId        int64                   `protobuf:"varint,1,opt,name=chat_id,json=chatId,proto3" json:"chat_id,omitempty"`
+	Name          *wrapperspb.StringValue `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Description   *wrapperspb.StringValue `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	AvatarFileId  *wrapperspb.StringValue `protobuf:"bytes,4,opt,name=avatar_file_id,json=avatarFileId,proto3" json:"avatar_file_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateChatRequest) Reset() {
+	*x = UpdateChatRequest{}
+	mi := &file_chat_v1_chat_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateChatRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateChatRequest) ProtoMessage() {}
+
+func (x *UpdateChatRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_chat_v1_chat_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateChatRequest.ProtoReflect.Descriptor instead.
+func (*UpdateChatRequest) Descriptor() ([]byte, []int) {
+	return file_chat_v1_chat_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *UpdateChatRequest) GetChatId() int64 {
+	if x != nil {
+		return x.ChatId
+	}
+	return 0
+}
+
+func (x *UpdateChatRequest) GetName() *wrapperspb.StringValue {
+	if x != nil {
+		return x.Name
+	}
+	return nil
+}
+
+func (x *UpdateChatRequest) GetDescription() *wrapperspb.StringValue {
+	if x != nil {
+		return x.Description
+	}
+	return nil
+}
+
+func (x *UpdateChatRequest) GetAvatarFileId() *wrapperspb.StringValue {
+	if x != nil {
+		return x.AvatarFileId
+	}
+	return nil
+}
+
 type DeleteChatRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ChatId        int64                  `protobuf:"varint,1,opt,name=chat_id,json=chatId,proto3" json:"chat_id,omitempty"`
@@ -413,7 +624,7 @@ type DeleteChatRequest struct {
 
 func (x *DeleteChatRequest) Reset() {
 	*x = DeleteChatRequest{}
-	mi := &file_chat_v1_chat_proto_msgTypes[5]
+	mi := &file_chat_v1_chat_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -425,7 +636,7 @@ func (x *DeleteChatRequest) String() string {
 func (*DeleteChatRequest) ProtoMessage() {}
 
 func (x *DeleteChatRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_proto_msgTypes[5]
+	mi := &file_chat_v1_chat_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -438,7 +649,7 @@ func (x *DeleteChatRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteChatRequest.ProtoReflect.Descriptor instead.
 func (*DeleteChatRequest) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_proto_rawDescGZIP(), []int{5}
+	return file_chat_v1_chat_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *DeleteChatRequest) GetChatId() int64 {
@@ -457,7 +668,7 @@ type GetChatRequest struct {
 
 func (x *GetChatRequest) Reset() {
 	*x = GetChatRequest{}
-	mi := &file_chat_v1_chat_proto_msgTypes[6]
+	mi := &file_chat_v1_chat_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -469,7 +680,7 @@ func (x *GetChatRequest) String() string {
 func (*GetChatRequest) ProtoMessage() {}
 
 func (x *GetChatRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_proto_msgTypes[6]
+	mi := &file_chat_v1_chat_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -482,7 +693,7 @@ func (x *GetChatRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetChatRequest.ProtoReflect.Descriptor instead.
 func (*GetChatRequest) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_proto_rawDescGZIP(), []int{6}
+	return file_chat_v1_chat_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *GetChatRequest) GetChatId() int64 {
@@ -496,13 +707,14 @@ type GetChatResponse struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	Chat           *Chat                  `protobuf:"bytes,1,opt,name=chat,proto3" json:"chat,omitempty"`
 	ParticipantIds []int64                `protobuf:"varint,2,rep,packed,name=participant_ids,json=participantIds,proto3" json:"participant_ids,omitempty"`
+	MyRole         Role                   `protobuf:"varint,3,opt,name=my_role,json=myRole,proto3,enum=chat.v1.Role" json:"my_role,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
 
 func (x *GetChatResponse) Reset() {
 	*x = GetChatResponse{}
-	mi := &file_chat_v1_chat_proto_msgTypes[7]
+	mi := &file_chat_v1_chat_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -514,7 +726,7 @@ func (x *GetChatResponse) String() string {
 func (*GetChatResponse) ProtoMessage() {}
 
 func (x *GetChatResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_proto_msgTypes[7]
+	mi := &file_chat_v1_chat_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -527,7 +739,7 @@ func (x *GetChatResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetChatResponse.ProtoReflect.Descriptor instead.
 func (*GetChatResponse) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_proto_rawDescGZIP(), []int{7}
+	return file_chat_v1_chat_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *GetChatResponse) GetChat() *Chat {
@@ -544,6 +756,13 @@ func (x *GetChatResponse) GetParticipantIds() []int64 {
 	return nil
 }
 
+func (x *GetChatResponse) GetMyRole() Role {
+	if x != nil {
+		return x.MyRole
+	}
+	return Role_ROLE_USER
+}
+
 type ListChatsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Cursor        string                 `protobuf:"bytes,1,opt,name=cursor,proto3" json:"cursor,omitempty"`
@@ -554,7 +773,7 @@ type ListChatsRequest struct {
 
 func (x *ListChatsRequest) Reset() {
 	*x = ListChatsRequest{}
-	mi := &file_chat_v1_chat_proto_msgTypes[8]
+	mi := &file_chat_v1_chat_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -566,7 +785,7 @@ func (x *ListChatsRequest) String() string {
 func (*ListChatsRequest) ProtoMessage() {}
 
 func (x *ListChatsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_proto_msgTypes[8]
+	mi := &file_chat_v1_chat_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -579,7 +798,7 @@ func (x *ListChatsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListChatsRequest.ProtoReflect.Descriptor instead.
 func (*ListChatsRequest) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_proto_rawDescGZIP(), []int{8}
+	return file_chat_v1_chat_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ListChatsRequest) GetCursor() string {
@@ -606,7 +825,7 @@ type ListChatsResponse struct {
 
 func (x *ListChatsResponse) Reset() {
 	*x = ListChatsResponse{}
-	mi := &file_chat_v1_chat_proto_msgTypes[9]
+	mi := &file_chat_v1_chat_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -618,7 +837,7 @@ func (x *ListChatsResponse) String() string {
 func (*ListChatsResponse) ProtoMessage() {}
 
 func (x *ListChatsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_proto_msgTypes[9]
+	mi := &file_chat_v1_chat_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -631,7 +850,7 @@ func (x *ListChatsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListChatsResponse.ProtoReflect.Descriptor instead.
 func (*ListChatsResponse) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_proto_rawDescGZIP(), []int{9}
+	return file_chat_v1_chat_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *ListChatsResponse) GetChats() []*Chat {
@@ -656,7 +875,7 @@ type ListChatIDsRequest struct {
 
 func (x *ListChatIDsRequest) Reset() {
 	*x = ListChatIDsRequest{}
-	mi := &file_chat_v1_chat_proto_msgTypes[10]
+	mi := &file_chat_v1_chat_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -668,7 +887,7 @@ func (x *ListChatIDsRequest) String() string {
 func (*ListChatIDsRequest) ProtoMessage() {}
 
 func (x *ListChatIDsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_proto_msgTypes[10]
+	mi := &file_chat_v1_chat_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -681,7 +900,7 @@ func (x *ListChatIDsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListChatIDsRequest.ProtoReflect.Descriptor instead.
 func (*ListChatIDsRequest) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_proto_rawDescGZIP(), []int{10}
+	return file_chat_v1_chat_proto_rawDescGZIP(), []int{12}
 }
 
 type ListChatIDsResponse struct {
@@ -693,7 +912,7 @@ type ListChatIDsResponse struct {
 
 func (x *ListChatIDsResponse) Reset() {
 	*x = ListChatIDsResponse{}
-	mi := &file_chat_v1_chat_proto_msgTypes[11]
+	mi := &file_chat_v1_chat_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -705,7 +924,7 @@ func (x *ListChatIDsResponse) String() string {
 func (*ListChatIDsResponse) ProtoMessage() {}
 
 func (x *ListChatIDsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_proto_msgTypes[11]
+	mi := &file_chat_v1_chat_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -718,7 +937,7 @@ func (x *ListChatIDsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListChatIDsResponse.ProtoReflect.Descriptor instead.
 func (*ListChatIDsResponse) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_proto_rawDescGZIP(), []int{11}
+	return file_chat_v1_chat_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ListChatIDsResponse) GetChatIds() []int64 {
@@ -739,7 +958,7 @@ type AddUserRequest struct {
 
 func (x *AddUserRequest) Reset() {
 	*x = AddUserRequest{}
-	mi := &file_chat_v1_chat_proto_msgTypes[12]
+	mi := &file_chat_v1_chat_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -751,7 +970,7 @@ func (x *AddUserRequest) String() string {
 func (*AddUserRequest) ProtoMessage() {}
 
 func (x *AddUserRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_proto_msgTypes[12]
+	mi := &file_chat_v1_chat_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -764,7 +983,7 @@ func (x *AddUserRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddUserRequest.ProtoReflect.Descriptor instead.
 func (*AddUserRequest) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_proto_rawDescGZIP(), []int{12}
+	return file_chat_v1_chat_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *AddUserRequest) GetChatId() int64 {
@@ -798,7 +1017,7 @@ type RemoveUserRequest struct {
 
 func (x *RemoveUserRequest) Reset() {
 	*x = RemoveUserRequest{}
-	mi := &file_chat_v1_chat_proto_msgTypes[13]
+	mi := &file_chat_v1_chat_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -810,7 +1029,7 @@ func (x *RemoveUserRequest) String() string {
 func (*RemoveUserRequest) ProtoMessage() {}
 
 func (x *RemoveUserRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_proto_msgTypes[13]
+	mi := &file_chat_v1_chat_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -823,7 +1042,7 @@ func (x *RemoveUserRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveUserRequest.ProtoReflect.Descriptor instead.
 func (*RemoveUserRequest) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_proto_rawDescGZIP(), []int{13}
+	return file_chat_v1_chat_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *RemoveUserRequest) GetChatId() int64 {
@@ -851,7 +1070,7 @@ type UpdateUserRoleRequest struct {
 
 func (x *UpdateUserRoleRequest) Reset() {
 	*x = UpdateUserRoleRequest{}
-	mi := &file_chat_v1_chat_proto_msgTypes[14]
+	mi := &file_chat_v1_chat_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -863,7 +1082,7 @@ func (x *UpdateUserRoleRequest) String() string {
 func (*UpdateUserRoleRequest) ProtoMessage() {}
 
 func (x *UpdateUserRoleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_proto_msgTypes[14]
+	mi := &file_chat_v1_chat_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -876,7 +1095,7 @@ func (x *UpdateUserRoleRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateUserRoleRequest.ProtoReflect.Descriptor instead.
 func (*UpdateUserRoleRequest) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_proto_rawDescGZIP(), []int{14}
+	return file_chat_v1_chat_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *UpdateUserRoleRequest) GetChatId() int64 {
@@ -901,18 +1120,19 @@ func (x *UpdateUserRoleRequest) GetRole() Role {
 }
 
 type SendMessageRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	ChatId         int64                  `protobuf:"varint,1,opt,name=chat_id,json=chatId,proto3" json:"chat_id,omitempty"`
-	Text           string                 `protobuf:"bytes,2,opt,name=text,proto3" json:"text,omitempty"`
-	IdempotencyKey string                 `protobuf:"bytes,3,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
-	AttachmentIds  []string               `protobuf:"bytes,4,rep,name=attachment_ids,json=attachmentIds,proto3" json:"attachment_ids,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	ChatId           int64                  `protobuf:"varint,1,opt,name=chat_id,json=chatId,proto3" json:"chat_id,omitempty"`
+	Text             string                 `protobuf:"bytes,2,opt,name=text,proto3" json:"text,omitempty"`
+	IdempotencyKey   string                 `protobuf:"bytes,3,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	AttachmentIds    []string               `protobuf:"bytes,4,rep,name=attachment_ids,json=attachmentIds,proto3" json:"attachment_ids,omitempty"`
+	ReplyToMessageId int64                  `protobuf:"varint,5,opt,name=reply_to_message_id,json=replyToMessageId,proto3" json:"reply_to_message_id,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *SendMessageRequest) Reset() {
 	*x = SendMessageRequest{}
-	mi := &file_chat_v1_chat_proto_msgTypes[15]
+	mi := &file_chat_v1_chat_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -924,7 +1144,7 @@ func (x *SendMessageRequest) String() string {
 func (*SendMessageRequest) ProtoMessage() {}
 
 func (x *SendMessageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_proto_msgTypes[15]
+	mi := &file_chat_v1_chat_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -937,7 +1157,7 @@ func (x *SendMessageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SendMessageRequest.ProtoReflect.Descriptor instead.
 func (*SendMessageRequest) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_proto_rawDescGZIP(), []int{15}
+	return file_chat_v1_chat_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *SendMessageRequest) GetChatId() int64 {
@@ -968,6 +1188,13 @@ func (x *SendMessageRequest) GetAttachmentIds() []string {
 	return nil
 }
 
+func (x *SendMessageRequest) GetReplyToMessageId() int64 {
+	if x != nil {
+		return x.ReplyToMessageId
+	}
+	return 0
+}
+
 type SendMessageResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	MessageId     int64                  `protobuf:"varint,1,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
@@ -977,7 +1204,7 @@ type SendMessageResponse struct {
 
 func (x *SendMessageResponse) Reset() {
 	*x = SendMessageResponse{}
-	mi := &file_chat_v1_chat_proto_msgTypes[16]
+	mi := &file_chat_v1_chat_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -989,7 +1216,7 @@ func (x *SendMessageResponse) String() string {
 func (*SendMessageResponse) ProtoMessage() {}
 
 func (x *SendMessageResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_proto_msgTypes[16]
+	mi := &file_chat_v1_chat_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1002,7 +1229,7 @@ func (x *SendMessageResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SendMessageResponse.ProtoReflect.Descriptor instead.
 func (*SendMessageResponse) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_proto_rawDescGZIP(), []int{16}
+	return file_chat_v1_chat_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *SendMessageResponse) GetMessageId() int64 {
@@ -1022,7 +1249,7 @@ type EditMessageRequest struct {
 
 func (x *EditMessageRequest) Reset() {
 	*x = EditMessageRequest{}
-	mi := &file_chat_v1_chat_proto_msgTypes[17]
+	mi := &file_chat_v1_chat_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1034,7 +1261,7 @@ func (x *EditMessageRequest) String() string {
 func (*EditMessageRequest) ProtoMessage() {}
 
 func (x *EditMessageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_proto_msgTypes[17]
+	mi := &file_chat_v1_chat_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1047,7 +1274,7 @@ func (x *EditMessageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EditMessageRequest.ProtoReflect.Descriptor instead.
 func (*EditMessageRequest) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_proto_rawDescGZIP(), []int{17}
+	return file_chat_v1_chat_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *EditMessageRequest) GetMessageId() int64 {
@@ -1073,7 +1300,7 @@ type DeleteMessageRequest struct {
 
 func (x *DeleteMessageRequest) Reset() {
 	*x = DeleteMessageRequest{}
-	mi := &file_chat_v1_chat_proto_msgTypes[18]
+	mi := &file_chat_v1_chat_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1085,7 +1312,7 @@ func (x *DeleteMessageRequest) String() string {
 func (*DeleteMessageRequest) ProtoMessage() {}
 
 func (x *DeleteMessageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_proto_msgTypes[18]
+	mi := &file_chat_v1_chat_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1098,7 +1325,7 @@ func (x *DeleteMessageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteMessageRequest.ProtoReflect.Descriptor instead.
 func (*DeleteMessageRequest) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_proto_rawDescGZIP(), []int{18}
+	return file_chat_v1_chat_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *DeleteMessageRequest) GetMessageId() int64 {
@@ -1118,7 +1345,7 @@ type PinMessageRequest struct {
 
 func (x *PinMessageRequest) Reset() {
 	*x = PinMessageRequest{}
-	mi := &file_chat_v1_chat_proto_msgTypes[19]
+	mi := &file_chat_v1_chat_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1130,7 +1357,7 @@ func (x *PinMessageRequest) String() string {
 func (*PinMessageRequest) ProtoMessage() {}
 
 func (x *PinMessageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_proto_msgTypes[19]
+	mi := &file_chat_v1_chat_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1143,7 +1370,7 @@ func (x *PinMessageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PinMessageRequest.ProtoReflect.Descriptor instead.
 func (*PinMessageRequest) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_proto_rawDescGZIP(), []int{19}
+	return file_chat_v1_chat_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *PinMessageRequest) GetMessageId() int64 {
@@ -1171,7 +1398,7 @@ type ListMessagesRequest struct {
 
 func (x *ListMessagesRequest) Reset() {
 	*x = ListMessagesRequest{}
-	mi := &file_chat_v1_chat_proto_msgTypes[20]
+	mi := &file_chat_v1_chat_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1183,7 +1410,7 @@ func (x *ListMessagesRequest) String() string {
 func (*ListMessagesRequest) ProtoMessage() {}
 
 func (x *ListMessagesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_proto_msgTypes[20]
+	mi := &file_chat_v1_chat_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1196,7 +1423,7 @@ func (x *ListMessagesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMessagesRequest.ProtoReflect.Descriptor instead.
 func (*ListMessagesRequest) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_proto_rawDescGZIP(), []int{20}
+	return file_chat_v1_chat_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *ListMessagesRequest) GetChatId() int64 {
@@ -1230,7 +1457,7 @@ type ListMessagesResponse struct {
 
 func (x *ListMessagesResponse) Reset() {
 	*x = ListMessagesResponse{}
-	mi := &file_chat_v1_chat_proto_msgTypes[21]
+	mi := &file_chat_v1_chat_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1242,7 +1469,7 @@ func (x *ListMessagesResponse) String() string {
 func (*ListMessagesResponse) ProtoMessage() {}
 
 func (x *ListMessagesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_proto_msgTypes[21]
+	mi := &file_chat_v1_chat_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1255,7 +1482,7 @@ func (x *ListMessagesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMessagesResponse.ProtoReflect.Descriptor instead.
 func (*ListMessagesResponse) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_proto_rawDescGZIP(), []int{21}
+	return file_chat_v1_chat_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *ListMessagesResponse) GetMessages() []*Message {
@@ -1282,7 +1509,7 @@ type MarkReadRequest struct {
 
 func (x *MarkReadRequest) Reset() {
 	*x = MarkReadRequest{}
-	mi := &file_chat_v1_chat_proto_msgTypes[22]
+	mi := &file_chat_v1_chat_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1294,7 +1521,7 @@ func (x *MarkReadRequest) String() string {
 func (*MarkReadRequest) ProtoMessage() {}
 
 func (x *MarkReadRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_proto_msgTypes[22]
+	mi := &file_chat_v1_chat_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1307,7 +1534,7 @@ func (x *MarkReadRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MarkReadRequest.ProtoReflect.Descriptor instead.
 func (*MarkReadRequest) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_proto_rawDescGZIP(), []int{22}
+	return file_chat_v1_chat_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *MarkReadRequest) GetChatId() int64 {
@@ -1333,7 +1560,7 @@ type GetUnreadCountsRequest struct {
 
 func (x *GetUnreadCountsRequest) Reset() {
 	*x = GetUnreadCountsRequest{}
-	mi := &file_chat_v1_chat_proto_msgTypes[23]
+	mi := &file_chat_v1_chat_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1345,7 +1572,7 @@ func (x *GetUnreadCountsRequest) String() string {
 func (*GetUnreadCountsRequest) ProtoMessage() {}
 
 func (x *GetUnreadCountsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_proto_msgTypes[23]
+	mi := &file_chat_v1_chat_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1358,7 +1585,7 @@ func (x *GetUnreadCountsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetUnreadCountsRequest.ProtoReflect.Descriptor instead.
 func (*GetUnreadCountsRequest) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_proto_rawDescGZIP(), []int{23}
+	return file_chat_v1_chat_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *GetUnreadCountsRequest) GetChatIds() []int64 {
@@ -1377,7 +1604,7 @@ type GetUnreadCountsResponse struct {
 
 func (x *GetUnreadCountsResponse) Reset() {
 	*x = GetUnreadCountsResponse{}
-	mi := &file_chat_v1_chat_proto_msgTypes[24]
+	mi := &file_chat_v1_chat_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1389,7 +1616,7 @@ func (x *GetUnreadCountsResponse) String() string {
 func (*GetUnreadCountsResponse) ProtoMessage() {}
 
 func (x *GetUnreadCountsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_v1_chat_proto_msgTypes[24]
+	mi := &file_chat_v1_chat_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1402,7 +1629,7 @@ func (x *GetUnreadCountsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetUnreadCountsResponse.ProtoReflect.Descriptor instead.
 func (*GetUnreadCountsResponse) Descriptor() ([]byte, []int) {
-	return file_chat_v1_chat_proto_rawDescGZIP(), []int{24}
+	return file_chat_v1_chat_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *GetUnreadCountsResponse) GetCounts() map[int64]int64 {
@@ -1416,18 +1643,25 @@ var File_chat_v1_chat_proto protoreflect.FileDescriptor
 
 const file_chat_v1_chat_proto_rawDesc = "" +
 	"\n" +
-	"\x12chat/v1/chat.proto\x12\achat.v1\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"[\n" +
+	"\x12chat/v1/chat.proto\x12\achat.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1egoogle/protobuf/wrappers.proto\"[\n" +
 	"\bChatInfo\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
 	"\vdescription\x18\x02 \x01(\tR\vdescription\x12\x19\n" +
-	"\buser_ids\x18\x03 \x03(\x03R\auserIds\"\xf9\x01\n" +
+	"\buser_ids\x18\x03 \x03(\x03R\auserIds\"\xcc\x03\n" +
 	"\x04Chat\x12\x17\n" +
 	"\achat_id\x18\x01 \x01(\x03R\x06chatId\x12\x19\n" +
 	"\bowner_id\x18\x02 \x01(\x03R\aownerId\x12.\n" +
 	"\tchat_info\x18\x03 \x01(\v2\x11.chat.v1.ChatInfoR\bchatInfo\x12B\n" +
 	"\x0flast_message_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\rlastMessageAt\x12&\n" +
 	"\x0flast_message_id\x18\x05 \x01(\x03R\rlastMessageId\x12!\n" +
-	"\funread_count\x18\x06 \x01(\x03R\vunreadCount\"\xa6\x02\n" +
+	"\funread_count\x18\x06 \x01(\x03R\vunreadCount\x12.\n" +
+	"\tchat_type\x18\a \x01(\x0e2\x11.chat.v1.ChatTypeR\bchatType\x120\n" +
+	"\x14last_message_preview\x18\b \x01(\tR\x12lastMessagePreview\x12'\n" +
+	"\x0fparticipant_ids\x18\t \x03(\x03R\x0eparticipantIds\x12 \n" +
+	"\fpeer_user_id\x18\n" +
+	" \x01(\x03R\n" +
+	"peerUserId\x12$\n" +
+	"\x0eavatar_file_id\x18\v \x01(\tR\favatarFileId\"\xd5\x02\n" +
 	"\aMessage\x12\x1d\n" +
 	"\n" +
 	"message_id\x18\x01 \x01(\x03R\tmessageId\x12\x1b\n" +
@@ -1438,18 +1672,28 @@ const file_chat_v1_chat_proto_rawDesc = "" +
 	"\asend_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\x06sendAt\x129\n" +
 	"\n" +
 	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12%\n" +
-	"\x0eattachment_ids\x18\b \x03(\tR\rattachmentIds\"C\n" +
+	"\x0eattachment_ids\x18\b \x03(\tR\rattachmentIds\x12-\n" +
+	"\x13reply_to_message_id\x18\t \x01(\x03R\x10replyToMessageId\"C\n" +
 	"\x11CreateChatRequest\x12.\n" +
 	"\tchat_info\x18\x01 \x01(\v2\x11.chat.v1.ChatInfoR\bchatInfo\"-\n" +
 	"\x12CreateChatResponse\x12\x17\n" +
-	"\achat_id\x18\x01 \x01(\x03R\x06chatId\",\n" +
+	"\achat_id\x18\x01 \x01(\x03R\x06chatId\"@\n" +
+	"\x1cGetOrCreateDirectChatRequest\x12 \n" +
+	"\fpeer_user_id\x18\x01 \x01(\x03R\n" +
+	"peerUserId\"\xe2\x01\n" +
+	"\x11UpdateChatRequest\x12\x17\n" +
+	"\achat_id\x18\x01 \x01(\x03R\x06chatId\x120\n" +
+	"\x04name\x18\x02 \x01(\v2\x1c.google.protobuf.StringValueR\x04name\x12>\n" +
+	"\vdescription\x18\x03 \x01(\v2\x1c.google.protobuf.StringValueR\vdescription\x12B\n" +
+	"\x0eavatar_file_id\x18\x04 \x01(\v2\x1c.google.protobuf.StringValueR\favatarFileId\",\n" +
 	"\x11DeleteChatRequest\x12\x17\n" +
 	"\achat_id\x18\x01 \x01(\x03R\x06chatId\")\n" +
 	"\x0eGetChatRequest\x12\x17\n" +
-	"\achat_id\x18\x01 \x01(\x03R\x06chatId\"]\n" +
+	"\achat_id\x18\x01 \x01(\x03R\x06chatId\"\x85\x01\n" +
 	"\x0fGetChatResponse\x12!\n" +
 	"\x04chat\x18\x01 \x01(\v2\r.chat.v1.ChatR\x04chat\x12'\n" +
-	"\x0fparticipant_ids\x18\x02 \x03(\x03R\x0eparticipantIds\"@\n" +
+	"\x0fparticipant_ids\x18\x02 \x03(\x03R\x0eparticipantIds\x12&\n" +
+	"\amy_role\x18\x03 \x01(\x0e2\r.chat.v1.RoleR\x06myRole\"@\n" +
 	"\x10ListChatsRequest\x12\x16\n" +
 	"\x06cursor\x18\x01 \x01(\tR\x06cursor\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\"Y\n" +
@@ -1470,12 +1714,13 @@ const file_chat_v1_chat_proto_rawDesc = "" +
 	"\x15UpdateUserRoleRequest\x12\x17\n" +
 	"\achat_id\x18\x01 \x01(\x03R\x06chatId\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\x03R\x06userId\x12!\n" +
-	"\x04role\x18\x03 \x01(\x0e2\r.chat.v1.RoleR\x04role\"\x91\x01\n" +
+	"\x04role\x18\x03 \x01(\x0e2\r.chat.v1.RoleR\x04role\"\xc0\x01\n" +
 	"\x12SendMessageRequest\x12\x17\n" +
 	"\achat_id\x18\x01 \x01(\x03R\x06chatId\x12\x12\n" +
 	"\x04text\x18\x02 \x01(\tR\x04text\x12'\n" +
 	"\x0fidempotency_key\x18\x03 \x01(\tR\x0eidempotencyKey\x12%\n" +
-	"\x0eattachment_ids\x18\x04 \x03(\tR\rattachmentIds\"4\n" +
+	"\x0eattachment_ids\x18\x04 \x03(\tR\rattachmentIds\x12-\n" +
+	"\x13reply_to_message_id\x18\x05 \x01(\x03R\x10replyToMessageId\"4\n" +
 	"\x13SendMessageResponse\x12\x1d\n" +
 	"\n" +
 	"message_id\x18\x01 \x01(\x03R\tmessageId\"G\n" +
@@ -1513,27 +1758,34 @@ const file_chat_v1_chat_proto_rawDesc = "" +
 	"\n" +
 	"ROLE_ADMIN\x10\x01\x12\x0e\n" +
 	"\n" +
-	"ROLE_OWNER\x10\x022\xa3\b\n" +
-	"\vChatService\x12E\n" +
+	"ROLE_OWNER\x10\x02*P\n" +
+	"\bChatType\x12\x19\n" +
+	"\x15CHAT_TYPE_UNSPECIFIED\x10\x00\x12\x14\n" +
+	"\x10CHAT_TYPE_DIRECT\x10\x01\x12\x13\n" +
+	"\x0fCHAT_TYPE_GROUP\x10\x022\xc7\x0e\n" +
+	"\vChatService\x12_\n" +
 	"\n" +
-	"CreateChat\x12\x1a.chat.v1.CreateChatRequest\x1a\x1b.chat.v1.CreateChatResponse\x12@\n" +
+	"CreateChat\x12\x1a.chat.v1.CreateChatRequest\x1a\x1b.chat.v1.CreateChatResponse\"\x18\x82\xd3\xe4\x93\x02\x12:\x01*\"\r/api/v1/chats\x12|\n" +
+	"\x15GetOrCreateDirectChat\x12%.chat.v1.GetOrCreateDirectChatRequest\x1a\x1b.chat.v1.CreateChatResponse\"\x1f\x82\xd3\xe4\x93\x02\x19:\x01*\"\x14/api/v1/chats:direct\x12d\n" +
 	"\n" +
-	"DeleteChat\x12\x1a.chat.v1.DeleteChatRequest\x1a\x16.google.protobuf.Empty\x12<\n" +
-	"\aGetChat\x12\x17.chat.v1.GetChatRequest\x1a\x18.chat.v1.GetChatResponse\x12B\n" +
-	"\tListChats\x12\x19.chat.v1.ListChatsRequest\x1a\x1a.chat.v1.ListChatsResponse\x12H\n" +
-	"\vListChatIDs\x12\x1b.chat.v1.ListChatIDsRequest\x1a\x1c.chat.v1.ListChatIDsResponse\x12:\n" +
-	"\aAddUser\x12\x17.chat.v1.AddUserRequest\x1a\x16.google.protobuf.Empty\x12@\n" +
+	"UpdateChat\x12\x1a.chat.v1.UpdateChatRequest\x1a\x16.google.protobuf.Empty\"\"\x82\xd3\xe4\x93\x02\x1c:\x01*2\x17/api/v1/chats/{chat_id}\x12a\n" +
 	"\n" +
-	"RemoveUser\x12\x1a.chat.v1.RemoveUserRequest\x1a\x16.google.protobuf.Empty\x12H\n" +
-	"\x0eUpdateUserRole\x12\x1e.chat.v1.UpdateUserRoleRequest\x1a\x16.google.protobuf.Empty\x12H\n" +
-	"\vSendMessage\x12\x1b.chat.v1.SendMessageRequest\x1a\x1c.chat.v1.SendMessageResponse\x12B\n" +
-	"\vEditMessage\x12\x1b.chat.v1.EditMessageRequest\x1a\x16.google.protobuf.Empty\x12F\n" +
-	"\rDeleteMessage\x12\x1d.chat.v1.DeleteMessageRequest\x1a\x16.google.protobuf.Empty\x12@\n" +
+	"DeleteChat\x12\x1a.chat.v1.DeleteChatRequest\x1a\x16.google.protobuf.Empty\"\x1f\x82\xd3\xe4\x93\x02\x19*\x17/api/v1/chats/{chat_id}\x12]\n" +
+	"\aGetChat\x12\x17.chat.v1.GetChatRequest\x1a\x18.chat.v1.GetChatResponse\"\x1f\x82\xd3\xe4\x93\x02\x19\x12\x17/api/v1/chats/{chat_id}\x12Y\n" +
+	"\tListChats\x12\x19.chat.v1.ListChatsRequest\x1a\x1a.chat.v1.ListChatsResponse\"\x15\x82\xd3\xe4\x93\x02\x0f\x12\r/api/v1/chats\x12c\n" +
+	"\vListChatIDs\x12\x1b.chat.v1.ListChatIDsRequest\x1a\x1c.chat.v1.ListChatIDsResponse\"\x19\x82\xd3\xe4\x93\x02\x13\x12\x11/api/v1/chats:ids\x12f\n" +
+	"\aAddUser\x12\x17.chat.v1.AddUserRequest\x1a\x16.google.protobuf.Empty\"*\x82\xd3\xe4\x93\x02$:\x01*\"\x1f/api/v1/chats/{chat_id}/members\x12s\n" +
 	"\n" +
-	"PinMessage\x12\x1a.chat.v1.PinMessageRequest\x1a\x16.google.protobuf.Empty\x12K\n" +
-	"\fListMessages\x12\x1c.chat.v1.ListMessagesRequest\x1a\x1d.chat.v1.ListMessagesResponse\x12<\n" +
-	"\bMarkRead\x12\x18.chat.v1.MarkReadRequest\x1a\x16.google.protobuf.Empty\x12T\n" +
-	"\x0fGetUnreadCounts\x12\x1f.chat.v1.GetUnreadCountsRequest\x1a .chat.v1.GetUnreadCountsResponseB@Z>github.com/CARAI-REA/messanger/shared/pkg/proto/chat/v1;chatv1b\x06proto3"
+	"RemoveUser\x12\x1a.chat.v1.RemoveUserRequest\x1a\x16.google.protobuf.Empty\"1\x82\xd3\xe4\x93\x02+*)/api/v1/chats/{chat_id}/members/{user_id}\x12~\n" +
+	"\x0eUpdateUserRole\x12\x1e.chat.v1.UpdateUserRoleRequest\x1a\x16.google.protobuf.Empty\"4\x82\xd3\xe4\x93\x02.:\x01*2)/api/v1/chats/{chat_id}/members/{user_id}\x12u\n" +
+	"\vSendMessage\x12\x1b.chat.v1.SendMessageRequest\x1a\x1c.chat.v1.SendMessageResponse\"+\x82\xd3\xe4\x93\x02%:\x01*\" /api/v1/chats/{chat_id}/messages\x12l\n" +
+	"\vEditMessage\x12\x1b.chat.v1.EditMessageRequest\x1a\x16.google.protobuf.Empty\"(\x82\xd3\xe4\x93\x02\":\x01*2\x1d/api/v1/messages/{message_id}\x12m\n" +
+	"\rDeleteMessage\x12\x1d.chat.v1.DeleteMessageRequest\x1a\x16.google.protobuf.Empty\"%\x82\xd3\xe4\x93\x02\x1f*\x1d/api/v1/messages/{message_id}\x12n\n" +
+	"\n" +
+	"PinMessage\x12\x1a.chat.v1.PinMessageRequest\x1a\x16.google.protobuf.Empty\",\x82\xd3\xe4\x93\x02&:\x01*\"!/api/v1/messages/{message_id}:pin\x12u\n" +
+	"\fListMessages\x12\x1c.chat.v1.ListMessagesRequest\x1a\x1d.chat.v1.ListMessagesResponse\"(\x82\xd3\xe4\x93\x02\"\x12 /api/v1/chats/{chat_id}/messages\x12e\n" +
+	"\bMarkRead\x12\x18.chat.v1.MarkReadRequest\x1a\x16.google.protobuf.Empty\"'\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/api/v1/chats/{chat_id}:read\x12r\n" +
+	"\x0fGetUnreadCounts\x12\x1f.chat.v1.GetUnreadCountsRequest\x1a .chat.v1.GetUnreadCountsResponse\"\x1c\x82\xd3\xe4\x93\x02\x16\x12\x14/api/v1/chats:unreadB@Z>github.com/CARAI-REA/messanger/shared/pkg/proto/chat/v1;chatv1b\x06proto3"
 
 var (
 	file_chat_v1_chat_proto_rawDescOnce sync.Once
@@ -1547,86 +1799,99 @@ func file_chat_v1_chat_proto_rawDescGZIP() []byte {
 	return file_chat_v1_chat_proto_rawDescData
 }
 
-var file_chat_v1_chat_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_chat_v1_chat_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
+var file_chat_v1_chat_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_chat_v1_chat_proto_msgTypes = make([]protoimpl.MessageInfo, 28)
 var file_chat_v1_chat_proto_goTypes = []any{
-	(Role)(0),                       // 0: chat.v1.Role
-	(*ChatInfo)(nil),                // 1: chat.v1.ChatInfo
-	(*Chat)(nil),                    // 2: chat.v1.Chat
-	(*Message)(nil),                 // 3: chat.v1.Message
-	(*CreateChatRequest)(nil),       // 4: chat.v1.CreateChatRequest
-	(*CreateChatResponse)(nil),      // 5: chat.v1.CreateChatResponse
-	(*DeleteChatRequest)(nil),       // 6: chat.v1.DeleteChatRequest
-	(*GetChatRequest)(nil),          // 7: chat.v1.GetChatRequest
-	(*GetChatResponse)(nil),         // 8: chat.v1.GetChatResponse
-	(*ListChatsRequest)(nil),        // 9: chat.v1.ListChatsRequest
-	(*ListChatsResponse)(nil),       // 10: chat.v1.ListChatsResponse
-	(*ListChatIDsRequest)(nil),      // 11: chat.v1.ListChatIDsRequest
-	(*ListChatIDsResponse)(nil),     // 12: chat.v1.ListChatIDsResponse
-	(*AddUserRequest)(nil),          // 13: chat.v1.AddUserRequest
-	(*RemoveUserRequest)(nil),       // 14: chat.v1.RemoveUserRequest
-	(*UpdateUserRoleRequest)(nil),   // 15: chat.v1.UpdateUserRoleRequest
-	(*SendMessageRequest)(nil),      // 16: chat.v1.SendMessageRequest
-	(*SendMessageResponse)(nil),     // 17: chat.v1.SendMessageResponse
-	(*EditMessageRequest)(nil),      // 18: chat.v1.EditMessageRequest
-	(*DeleteMessageRequest)(nil),    // 19: chat.v1.DeleteMessageRequest
-	(*PinMessageRequest)(nil),       // 20: chat.v1.PinMessageRequest
-	(*ListMessagesRequest)(nil),     // 21: chat.v1.ListMessagesRequest
-	(*ListMessagesResponse)(nil),    // 22: chat.v1.ListMessagesResponse
-	(*MarkReadRequest)(nil),         // 23: chat.v1.MarkReadRequest
-	(*GetUnreadCountsRequest)(nil),  // 24: chat.v1.GetUnreadCountsRequest
-	(*GetUnreadCountsResponse)(nil), // 25: chat.v1.GetUnreadCountsResponse
-	nil,                             // 26: chat.v1.GetUnreadCountsResponse.CountsEntry
-	(*timestamppb.Timestamp)(nil),   // 27: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),           // 28: google.protobuf.Empty
+	(Role)(0),                            // 0: chat.v1.Role
+	(ChatType)(0),                        // 1: chat.v1.ChatType
+	(*ChatInfo)(nil),                     // 2: chat.v1.ChatInfo
+	(*Chat)(nil),                         // 3: chat.v1.Chat
+	(*Message)(nil),                      // 4: chat.v1.Message
+	(*CreateChatRequest)(nil),            // 5: chat.v1.CreateChatRequest
+	(*CreateChatResponse)(nil),           // 6: chat.v1.CreateChatResponse
+	(*GetOrCreateDirectChatRequest)(nil), // 7: chat.v1.GetOrCreateDirectChatRequest
+	(*UpdateChatRequest)(nil),            // 8: chat.v1.UpdateChatRequest
+	(*DeleteChatRequest)(nil),            // 9: chat.v1.DeleteChatRequest
+	(*GetChatRequest)(nil),               // 10: chat.v1.GetChatRequest
+	(*GetChatResponse)(nil),              // 11: chat.v1.GetChatResponse
+	(*ListChatsRequest)(nil),             // 12: chat.v1.ListChatsRequest
+	(*ListChatsResponse)(nil),            // 13: chat.v1.ListChatsResponse
+	(*ListChatIDsRequest)(nil),           // 14: chat.v1.ListChatIDsRequest
+	(*ListChatIDsResponse)(nil),          // 15: chat.v1.ListChatIDsResponse
+	(*AddUserRequest)(nil),               // 16: chat.v1.AddUserRequest
+	(*RemoveUserRequest)(nil),            // 17: chat.v1.RemoveUserRequest
+	(*UpdateUserRoleRequest)(nil),        // 18: chat.v1.UpdateUserRoleRequest
+	(*SendMessageRequest)(nil),           // 19: chat.v1.SendMessageRequest
+	(*SendMessageResponse)(nil),          // 20: chat.v1.SendMessageResponse
+	(*EditMessageRequest)(nil),           // 21: chat.v1.EditMessageRequest
+	(*DeleteMessageRequest)(nil),         // 22: chat.v1.DeleteMessageRequest
+	(*PinMessageRequest)(nil),            // 23: chat.v1.PinMessageRequest
+	(*ListMessagesRequest)(nil),          // 24: chat.v1.ListMessagesRequest
+	(*ListMessagesResponse)(nil),         // 25: chat.v1.ListMessagesResponse
+	(*MarkReadRequest)(nil),              // 26: chat.v1.MarkReadRequest
+	(*GetUnreadCountsRequest)(nil),       // 27: chat.v1.GetUnreadCountsRequest
+	(*GetUnreadCountsResponse)(nil),      // 28: chat.v1.GetUnreadCountsResponse
+	nil,                                  // 29: chat.v1.GetUnreadCountsResponse.CountsEntry
+	(*timestamppb.Timestamp)(nil),        // 30: google.protobuf.Timestamp
+	(*wrapperspb.StringValue)(nil),       // 31: google.protobuf.StringValue
+	(*emptypb.Empty)(nil),                // 32: google.protobuf.Empty
 }
 var file_chat_v1_chat_proto_depIdxs = []int32{
-	1,  // 0: chat.v1.Chat.chat_info:type_name -> chat.v1.ChatInfo
-	27, // 1: chat.v1.Chat.last_message_at:type_name -> google.protobuf.Timestamp
-	27, // 2: chat.v1.Message.send_at:type_name -> google.protobuf.Timestamp
-	27, // 3: chat.v1.Message.updated_at:type_name -> google.protobuf.Timestamp
-	1,  // 4: chat.v1.CreateChatRequest.chat_info:type_name -> chat.v1.ChatInfo
-	2,  // 5: chat.v1.GetChatResponse.chat:type_name -> chat.v1.Chat
-	2,  // 6: chat.v1.ListChatsResponse.chats:type_name -> chat.v1.Chat
-	0,  // 7: chat.v1.AddUserRequest.role:type_name -> chat.v1.Role
-	0,  // 8: chat.v1.UpdateUserRoleRequest.role:type_name -> chat.v1.Role
-	3,  // 9: chat.v1.ListMessagesResponse.messages:type_name -> chat.v1.Message
-	26, // 10: chat.v1.GetUnreadCountsResponse.counts:type_name -> chat.v1.GetUnreadCountsResponse.CountsEntry
-	4,  // 11: chat.v1.ChatService.CreateChat:input_type -> chat.v1.CreateChatRequest
-	6,  // 12: chat.v1.ChatService.DeleteChat:input_type -> chat.v1.DeleteChatRequest
-	7,  // 13: chat.v1.ChatService.GetChat:input_type -> chat.v1.GetChatRequest
-	9,  // 14: chat.v1.ChatService.ListChats:input_type -> chat.v1.ListChatsRequest
-	11, // 15: chat.v1.ChatService.ListChatIDs:input_type -> chat.v1.ListChatIDsRequest
-	13, // 16: chat.v1.ChatService.AddUser:input_type -> chat.v1.AddUserRequest
-	14, // 17: chat.v1.ChatService.RemoveUser:input_type -> chat.v1.RemoveUserRequest
-	15, // 18: chat.v1.ChatService.UpdateUserRole:input_type -> chat.v1.UpdateUserRoleRequest
-	16, // 19: chat.v1.ChatService.SendMessage:input_type -> chat.v1.SendMessageRequest
-	18, // 20: chat.v1.ChatService.EditMessage:input_type -> chat.v1.EditMessageRequest
-	19, // 21: chat.v1.ChatService.DeleteMessage:input_type -> chat.v1.DeleteMessageRequest
-	20, // 22: chat.v1.ChatService.PinMessage:input_type -> chat.v1.PinMessageRequest
-	21, // 23: chat.v1.ChatService.ListMessages:input_type -> chat.v1.ListMessagesRequest
-	23, // 24: chat.v1.ChatService.MarkRead:input_type -> chat.v1.MarkReadRequest
-	24, // 25: chat.v1.ChatService.GetUnreadCounts:input_type -> chat.v1.GetUnreadCountsRequest
-	5,  // 26: chat.v1.ChatService.CreateChat:output_type -> chat.v1.CreateChatResponse
-	28, // 27: chat.v1.ChatService.DeleteChat:output_type -> google.protobuf.Empty
-	8,  // 28: chat.v1.ChatService.GetChat:output_type -> chat.v1.GetChatResponse
-	10, // 29: chat.v1.ChatService.ListChats:output_type -> chat.v1.ListChatsResponse
-	12, // 30: chat.v1.ChatService.ListChatIDs:output_type -> chat.v1.ListChatIDsResponse
-	28, // 31: chat.v1.ChatService.AddUser:output_type -> google.protobuf.Empty
-	28, // 32: chat.v1.ChatService.RemoveUser:output_type -> google.protobuf.Empty
-	28, // 33: chat.v1.ChatService.UpdateUserRole:output_type -> google.protobuf.Empty
-	17, // 34: chat.v1.ChatService.SendMessage:output_type -> chat.v1.SendMessageResponse
-	28, // 35: chat.v1.ChatService.EditMessage:output_type -> google.protobuf.Empty
-	28, // 36: chat.v1.ChatService.DeleteMessage:output_type -> google.protobuf.Empty
-	28, // 37: chat.v1.ChatService.PinMessage:output_type -> google.protobuf.Empty
-	22, // 38: chat.v1.ChatService.ListMessages:output_type -> chat.v1.ListMessagesResponse
-	28, // 39: chat.v1.ChatService.MarkRead:output_type -> google.protobuf.Empty
-	25, // 40: chat.v1.ChatService.GetUnreadCounts:output_type -> chat.v1.GetUnreadCountsResponse
-	26, // [26:41] is the sub-list for method output_type
-	11, // [11:26] is the sub-list for method input_type
-	11, // [11:11] is the sub-list for extension type_name
-	11, // [11:11] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	2,  // 0: chat.v1.Chat.chat_info:type_name -> chat.v1.ChatInfo
+	30, // 1: chat.v1.Chat.last_message_at:type_name -> google.protobuf.Timestamp
+	1,  // 2: chat.v1.Chat.chat_type:type_name -> chat.v1.ChatType
+	30, // 3: chat.v1.Message.send_at:type_name -> google.protobuf.Timestamp
+	30, // 4: chat.v1.Message.updated_at:type_name -> google.protobuf.Timestamp
+	2,  // 5: chat.v1.CreateChatRequest.chat_info:type_name -> chat.v1.ChatInfo
+	31, // 6: chat.v1.UpdateChatRequest.name:type_name -> google.protobuf.StringValue
+	31, // 7: chat.v1.UpdateChatRequest.description:type_name -> google.protobuf.StringValue
+	31, // 8: chat.v1.UpdateChatRequest.avatar_file_id:type_name -> google.protobuf.StringValue
+	3,  // 9: chat.v1.GetChatResponse.chat:type_name -> chat.v1.Chat
+	0,  // 10: chat.v1.GetChatResponse.my_role:type_name -> chat.v1.Role
+	3,  // 11: chat.v1.ListChatsResponse.chats:type_name -> chat.v1.Chat
+	0,  // 12: chat.v1.AddUserRequest.role:type_name -> chat.v1.Role
+	0,  // 13: chat.v1.UpdateUserRoleRequest.role:type_name -> chat.v1.Role
+	4,  // 14: chat.v1.ListMessagesResponse.messages:type_name -> chat.v1.Message
+	29, // 15: chat.v1.GetUnreadCountsResponse.counts:type_name -> chat.v1.GetUnreadCountsResponse.CountsEntry
+	5,  // 16: chat.v1.ChatService.CreateChat:input_type -> chat.v1.CreateChatRequest
+	7,  // 17: chat.v1.ChatService.GetOrCreateDirectChat:input_type -> chat.v1.GetOrCreateDirectChatRequest
+	8,  // 18: chat.v1.ChatService.UpdateChat:input_type -> chat.v1.UpdateChatRequest
+	9,  // 19: chat.v1.ChatService.DeleteChat:input_type -> chat.v1.DeleteChatRequest
+	10, // 20: chat.v1.ChatService.GetChat:input_type -> chat.v1.GetChatRequest
+	12, // 21: chat.v1.ChatService.ListChats:input_type -> chat.v1.ListChatsRequest
+	14, // 22: chat.v1.ChatService.ListChatIDs:input_type -> chat.v1.ListChatIDsRequest
+	16, // 23: chat.v1.ChatService.AddUser:input_type -> chat.v1.AddUserRequest
+	17, // 24: chat.v1.ChatService.RemoveUser:input_type -> chat.v1.RemoveUserRequest
+	18, // 25: chat.v1.ChatService.UpdateUserRole:input_type -> chat.v1.UpdateUserRoleRequest
+	19, // 26: chat.v1.ChatService.SendMessage:input_type -> chat.v1.SendMessageRequest
+	21, // 27: chat.v1.ChatService.EditMessage:input_type -> chat.v1.EditMessageRequest
+	22, // 28: chat.v1.ChatService.DeleteMessage:input_type -> chat.v1.DeleteMessageRequest
+	23, // 29: chat.v1.ChatService.PinMessage:input_type -> chat.v1.PinMessageRequest
+	24, // 30: chat.v1.ChatService.ListMessages:input_type -> chat.v1.ListMessagesRequest
+	26, // 31: chat.v1.ChatService.MarkRead:input_type -> chat.v1.MarkReadRequest
+	27, // 32: chat.v1.ChatService.GetUnreadCounts:input_type -> chat.v1.GetUnreadCountsRequest
+	6,  // 33: chat.v1.ChatService.CreateChat:output_type -> chat.v1.CreateChatResponse
+	6,  // 34: chat.v1.ChatService.GetOrCreateDirectChat:output_type -> chat.v1.CreateChatResponse
+	32, // 35: chat.v1.ChatService.UpdateChat:output_type -> google.protobuf.Empty
+	32, // 36: chat.v1.ChatService.DeleteChat:output_type -> google.protobuf.Empty
+	11, // 37: chat.v1.ChatService.GetChat:output_type -> chat.v1.GetChatResponse
+	13, // 38: chat.v1.ChatService.ListChats:output_type -> chat.v1.ListChatsResponse
+	15, // 39: chat.v1.ChatService.ListChatIDs:output_type -> chat.v1.ListChatIDsResponse
+	32, // 40: chat.v1.ChatService.AddUser:output_type -> google.protobuf.Empty
+	32, // 41: chat.v1.ChatService.RemoveUser:output_type -> google.protobuf.Empty
+	32, // 42: chat.v1.ChatService.UpdateUserRole:output_type -> google.protobuf.Empty
+	20, // 43: chat.v1.ChatService.SendMessage:output_type -> chat.v1.SendMessageResponse
+	32, // 44: chat.v1.ChatService.EditMessage:output_type -> google.protobuf.Empty
+	32, // 45: chat.v1.ChatService.DeleteMessage:output_type -> google.protobuf.Empty
+	32, // 46: chat.v1.ChatService.PinMessage:output_type -> google.protobuf.Empty
+	25, // 47: chat.v1.ChatService.ListMessages:output_type -> chat.v1.ListMessagesResponse
+	32, // 48: chat.v1.ChatService.MarkRead:output_type -> google.protobuf.Empty
+	28, // 49: chat.v1.ChatService.GetUnreadCounts:output_type -> chat.v1.GetUnreadCountsResponse
+	33, // [33:50] is the sub-list for method output_type
+	16, // [16:33] is the sub-list for method input_type
+	16, // [16:16] is the sub-list for extension type_name
+	16, // [16:16] is the sub-list for extension extendee
+	0,  // [0:16] is the sub-list for field type_name
 }
 
 func init() { file_chat_v1_chat_proto_init() }
@@ -1639,8 +1904,8 @@ func file_chat_v1_chat_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_chat_v1_chat_proto_rawDesc), len(file_chat_v1_chat_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   26,
+			NumEnums:      2,
+			NumMessages:   28,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -2,11 +2,14 @@ package user
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"user/internal/model"
@@ -22,6 +25,11 @@ func NewRepository(db *pgxpool.Pool) repository.UserRepository {
 	return &repo{db: db, sb: sq.StatementBuilder.PlaceholderFormat(sq.Dollar)}
 }
 
+func isUniqueViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "23505"
+}
+
 func (r *repo) Create(ctx context.Context, info *model.UserInfo, passwordHash string, createdAt time.Time, buildEvents func(id int64) ([]repository.OutboxEvent, error)) (int64, error) {
 	tx, err := r.db.Begin(ctx)
 	if err != nil {
@@ -30,14 +38,17 @@ func (r *repo) Create(ctx context.Context, info *model.UserInfo, passwordHash st
 	defer tx.Rollback(ctx)
 
 	q, args, err := r.sb.Insert("users").
-		Columns("name", "email", "password", "created_at", "updated_at").
-		Values(info.Name, info.Email, passwordHash, createdAt, createdAt).
+		Columns("name", "email", "username", "password", "created_at", "updated_at").
+		Values(info.Name, info.Email, strings.ToLower(info.Username), passwordHash, createdAt, createdAt).
 		Suffix("RETURNING id").ToSql()
 	if err != nil {
 		return 0, err
 	}
 	var id int64
 	if err := tx.QueryRow(ctx, q, args...).Scan(&id); err != nil {
+		if isUniqueViolation(err) {
+			return 0, fmt.Errorf("email or username already taken")
+		}
 		return 0, fmt.Errorf("create user: %w", err)
 	}
 	if buildEvents != nil {
@@ -60,48 +71,110 @@ func (r *repo) Create(ctx context.Context, info *model.UserInfo, passwordHash st
 	return id, nil
 }
 
-func (r *repo) Get(ctx context.Context, id int64) (*model.User, error) {
-	q, args, err := r.sb.Select("id", "name", "email", "created_at", "updated_at").
-		From("users").Where(sq.Eq{"id": id}).ToSql()
-	if err != nil {
-		return nil, err
-	}
+func scanUser(row pgx.Row) (*model.User, error) {
 	var u model.User
-	err = r.db.QueryRow(ctx, q, args...).Scan(&u.ID, &u.Info.Name, &u.Info.Email, &u.CreatedAt, &u.UpdatedAt)
+	var avatar *string
+	err := row.Scan(&u.ID, &u.Info.Name, &u.Info.Email, &u.Info.Username, &avatar, &u.CreatedAt, &u.UpdatedAt)
 	if err == pgx.ErrNoRows {
 		return nil, fmt.Errorf("user not found")
 	}
 	if err != nil {
 		return nil, err
 	}
+	if avatar != nil {
+		u.AvatarFileID = *avatar
+	}
 	return &u, nil
 }
 
+func (r *repo) Get(ctx context.Context, id int64) (*model.User, error) {
+	q, args, err := r.sb.Select("id", "name", "email", "username", "avatar_file_id", "created_at", "updated_at").
+		From("users").Where(sq.Eq{"id": id}).ToSql()
+	if err != nil {
+		return nil, err
+	}
+	return scanUser(r.db.QueryRow(ctx, q, args...))
+}
+
 func (r *repo) GetByEmail(ctx context.Context, email string) (*model.User, string, error) {
-	q, args, err := r.sb.Select("id", "name", "email", "password", "created_at", "updated_at").
+	q, args, err := r.sb.Select("id", "name", "email", "username", "avatar_file_id", "password", "created_at", "updated_at").
 		From("users").Where(sq.Eq{"email": email}).ToSql()
 	if err != nil {
 		return nil, "", err
 	}
 	var u model.User
+	var avatar *string
 	var hash string
-	err = r.db.QueryRow(ctx, q, args...).Scan(&u.ID, &u.Info.Name, &u.Info.Email, &hash, &u.CreatedAt, &u.UpdatedAt)
+	err = r.db.QueryRow(ctx, q, args...).Scan(&u.ID, &u.Info.Name, &u.Info.Email, &u.Info.Username, &avatar, &hash, &u.CreatedAt, &u.UpdatedAt)
 	if err == pgx.ErrNoRows {
 		return nil, "", fmt.Errorf("user not found")
 	}
 	if err != nil {
 		return nil, "", err
 	}
+	if avatar != nil {
+		u.AvatarFileID = *avatar
+	}
 	return &u, hash, nil
 }
 
-func (r *repo) Update(ctx context.Context, id int64, name, email *string) error {
-	ub := r.sb.Update("users").Set("updated_at", time.Now()).Where(sq.Eq{"id": id})
-	if name != nil {
-		ub = ub.Set("name", *name)
+func (r *repo) GetByUsername(ctx context.Context, username string) (*model.User, error) {
+	q, args, err := r.sb.Select("id", "name", "email", "username", "avatar_file_id", "created_at", "updated_at").
+		From("users").Where(sq.Eq{"username": strings.ToLower(username)}).ToSql()
+	if err != nil {
+		return nil, err
 	}
-	if email != nil {
-		ub = ub.Set("email", *email)
+	return scanUser(r.db.QueryRow(ctx, q, args...))
+}
+
+func (r *repo) Search(ctx context.Context, query string, limit int) ([]*model.User, error) {
+	if limit <= 0 || limit > 50 {
+		limit = 20
+	}
+	q := strings.TrimSpace(query)
+	if q == "" {
+		return nil, nil
+	}
+	q = strings.TrimPrefix(q, "@")
+	pattern := "%" + strings.ToLower(q) + "%"
+	sql := `SELECT id, name, email, username, avatar_file_id, created_at, updated_at
+		FROM users
+		WHERE username ILIKE $1 OR name ILIKE $1
+		ORDER BY CASE WHEN lower(username) = lower($2) THEN 0 ELSE 1 END, username
+		LIMIT $3`
+	rows, err := r.db.Query(ctx, sql, pattern, q, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []*model.User
+	for rows.Next() {
+		var u model.User
+		var avatar *string
+		if err := rows.Scan(&u.ID, &u.Info.Name, &u.Info.Email, &u.Info.Username, &avatar, &u.CreatedAt, &u.UpdatedAt); err != nil {
+			return nil, err
+		}
+		if avatar != nil {
+			u.AvatarFileID = *avatar
+		}
+		out = append(out, &u)
+	}
+	return out, rows.Err()
+}
+
+func (r *repo) Update(ctx context.Context, id int64, upd repository.UserUpdate) error {
+	ub := r.sb.Update("users").Set("updated_at", time.Now()).Where(sq.Eq{"id": id})
+	if upd.Name != nil {
+		ub = ub.Set("name", *upd.Name)
+	}
+	if upd.Email != nil {
+		ub = ub.Set("email", *upd.Email)
+	}
+	if upd.Username != nil {
+		ub = ub.Set("username", strings.ToLower(*upd.Username))
+	}
+	if upd.AvatarFileID != nil {
+		ub = ub.Set("avatar_file_id", *upd.AvatarFileID)
 	}
 	q, args, err := ub.ToSql()
 	if err != nil {
@@ -109,6 +182,9 @@ func (r *repo) Update(ctx context.Context, id int64, name, email *string) error 
 	}
 	tag, err := r.db.Exec(ctx, q, args...)
 	if err != nil {
+		if isUniqueViolation(err) {
+			return fmt.Errorf("email or username already taken")
+		}
 		return err
 	}
 	if tag.RowsAffected() == 0 {

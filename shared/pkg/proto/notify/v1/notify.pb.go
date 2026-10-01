@@ -7,6 +7,7 @@
 package notifyv1
 
 import (
+	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
@@ -122,17 +123,17 @@ var File_notify_v1_notify_proto protoreflect.FileDescriptor
 
 const file_notify_v1_notify_proto_rawDesc = "" +
 	"\n" +
-	"\x16notify/v1/notify.proto\x12\tnotify.v1\x1a\x1bgoogle/protobuf/empty.proto\"R\n" +
+	"\x16notify/v1/notify.proto\x12\tnotify.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1bgoogle/protobuf/empty.proto\"R\n" +
 	"\x15RegisterDeviceRequest\x12\x1a\n" +
 	"\bplatform\x18\x01 \x01(\tR\bplatform\x12\x1d\n" +
 	"\n" +
 	"push_token\x18\x02 \x01(\tR\tpushToken\"8\n" +
 	"\x17UnregisterDeviceRequest\x12\x1d\n" +
 	"\n" +
-	"push_token\x18\x01 \x01(\tR\tpushToken2\xab\x01\n" +
-	"\rNotifyService\x12J\n" +
-	"\x0eRegisterDevice\x12 .notify.v1.RegisterDeviceRequest\x1a\x16.google.protobuf.Empty\x12N\n" +
-	"\x10UnregisterDevice\x12\".notify.v1.UnregisterDeviceRequest\x1a\x16.google.protobuf.EmptyBDZBgithub.com/CARAI-REA/messanger/shared/pkg/proto/notify/v1;notifyv1b\x06proto3"
+	"push_token\x18\x01 \x01(\tR\tpushToken2\xfb\x01\n" +
+	"\rNotifyService\x12m\n" +
+	"\x0eRegisterDevice\x12 .notify.v1.RegisterDeviceRequest\x1a\x16.google.protobuf.Empty\"!\x82\xd3\xe4\x93\x02\x1b:\x01*\"\x16/api/v1/notify/devices\x12{\n" +
+	"\x10UnregisterDevice\x12\".notify.v1.UnregisterDeviceRequest\x1a\x16.google.protobuf.Empty\"+\x82\xd3\xe4\x93\x02%*#/api/v1/notify/devices/{push_token}BDZBgithub.com/CARAI-REA/messanger/shared/pkg/proto/notify/v1;notifyv1b\x06proto3"
 
 var (
 	file_notify_v1_notify_proto_rawDescOnce sync.Once

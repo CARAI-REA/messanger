@@ -45,6 +45,8 @@ task smoke
 
 Web UI (Telegram-style): http://localhost:8088 after `task up-web`.
 
+Register with a unique `@username` (letters/digits/underscore). Find people via search or New message; groups via New group.
+
 Gateway scale check: `task up-gateway-scaled`
 
 Local ports: see [deploy/LOCAL_ACCESS.md](deploy/LOCAL_ACCESS.md).

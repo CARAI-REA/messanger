@@ -7,3 +7,10 @@ export async function searchMessages(query: string, chatId?: number) {
     hits?: Array<{ chatId?: number; messageId?: number; text?: string; snippet?: string }>
   }>(`/api/v1/search/messages?${q}`)
 }
+
+export async function searchChats(query: string) {
+  const q = new URLSearchParams({ query, limit: '20' })
+  return api<{
+    hits?: Array<{ chatId?: number; name?: string; snippet?: string }>
+  }>(`/api/v1/search/chats?${q}`)
+}

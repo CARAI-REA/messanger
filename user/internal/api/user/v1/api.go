@@ -3,6 +3,7 @@ package userv1api
 import (
 	"context"
 	"strconv"
+	"strings"
 
 	userv1 "github.com/CARAI-REA/messanger/shared/pkg/proto/user/v1"
 	"google.golang.org/grpc/codes"
@@ -11,6 +12,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"user/internal/model"
+	"user/internal/repository"
 	"user/internal/service"
 )
 
@@ -45,8 +47,16 @@ func (i *Implementation) Create(ctx context.Context, req *userv1.CreateRequest) 
 	if req.GetUserInfo() == nil {
 		return nil, status.Error(codes.InvalidArgument, "user_info required")
 	}
-	id, err := i.svc.Create(ctx, model.UserInfo{Name: req.UserInfo.Name, Email: req.UserInfo.Email}, req.Password, req.PasswordConfirm)
+	id, err := i.svc.Create(ctx, model.UserInfo{
+		Name:     req.UserInfo.Name,
+		Email:    req.UserInfo.Email,
+		Username: req.UserInfo.Username,
+	}, req.Password, req.PasswordConfirm)
 	if err != nil {
+		msg := err.Error()
+		if strings.Contains(msg, "already taken") {
+			return nil, status.Error(codes.AlreadyExists, msg)
+		}
 		return nil, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	return &userv1.CreateResponse{Id: id}, nil
@@ -57,7 +67,39 @@ func (i *Implementation) Get(ctx context.Context, req *userv1.GetRequest) (*user
 	if err != nil {
 		return nil, status.Errorf(codes.NotFound, "%v", err)
 	}
-	return &userv1.GetResponse{User: toProto(u)}, nil
+	return &userv1.GetResponse{User: toPublicProto(u)}, nil
+}
+
+func (i *Implementation) GetMe(ctx context.Context, _ *emptypb.Empty) (*userv1.GetResponse, error) {
+	id, err := userIDFromCtx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	u, err := i.svc.Get(ctx, id)
+	if err != nil {
+		return nil, status.Errorf(codes.NotFound, "%v", err)
+	}
+	return &userv1.GetResponse{User: toPrivateProto(u)}, nil
+}
+
+func (i *Implementation) GetByUsername(ctx context.Context, req *userv1.GetByUsernameRequest) (*userv1.GetResponse, error) {
+	u, err := i.svc.GetByUsername(ctx, req.GetUsername())
+	if err != nil {
+		return nil, status.Errorf(codes.NotFound, "%v", err)
+	}
+	return &userv1.GetResponse{User: toPublicProto(u)}, nil
+}
+
+func (i *Implementation) SearchUsers(ctx context.Context, req *userv1.SearchUsersRequest) (*userv1.SearchUsersResponse, error) {
+	users, err := i.svc.Search(ctx, req.GetQuery(), int(req.GetLimit()))
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "%v", err)
+	}
+	out := make([]*userv1.User, 0, len(users))
+	for _, u := range users {
+		out = append(out, toPublicProto(u))
+	}
+	return &userv1.SearchUsersResponse{Users: out}, nil
 }
 
 func (i *Implementation) Update(ctx context.Context, req *userv1.UpdateRequest) (*emptypb.Empty, error) {
@@ -65,16 +107,31 @@ func (i *Implementation) Update(ctx context.Context, req *userv1.UpdateRequest) 
 	if err != nil {
 		return nil, err
 	}
-	var name, email *string
+	upd := repository.UserUpdate{}
 	if req.Name != nil {
 		v := req.Name.GetValue()
-		name = &v
+		upd.Name = &v
 	}
 	if req.Email != nil {
 		v := req.Email.GetValue()
-		email = &v
+		upd.Email = &v
 	}
-	if err := i.svc.Update(ctx, id, name, email); err != nil {
+	if req.Username != nil {
+		v := req.Username.GetValue()
+		upd.Username = &v
+	}
+	if req.AvatarFileId != nil {
+		v := req.AvatarFileId.GetValue()
+		upd.AvatarFileID = &v
+	}
+	if err := i.svc.Update(ctx, id, upd); err != nil {
+		msg := err.Error()
+		if strings.Contains(msg, "already taken") {
+			return nil, status.Error(codes.AlreadyExists, msg)
+		}
+		if strings.Contains(msg, "username") {
+			return nil, status.Error(codes.InvalidArgument, msg)
+		}
 		return nil, status.Errorf(codes.Internal, "%v", err)
 	}
 	return &emptypb.Empty{}, nil
@@ -110,13 +167,24 @@ func (i *Implementation) ValidateCredentials(ctx context.Context, req *userv1.Va
 	return &userv1.ValidateCredentialsResponse{Valid: ok, UserId: id}, nil
 }
 
-func toProto(u *model.User) *userv1.User {
+func toPublicProto(u *model.User) *userv1.User {
 	return &userv1.User{
 		Id: u.ID,
-		UserInfo: &userv1.UserInfo{Name: u.Info.Name, Email: u.Info.Email},
-		CreatedAt: timestamppb.New(u.CreatedAt),
-		UpdatedAt: timestamppb.New(u.UpdatedAt),
+		UserInfo: &userv1.UserInfo{
+			Name:     u.Info.Name,
+			Username: u.Info.Username,
+			// email intentionally omitted for public views
+		},
+		AvatarFileId: u.AvatarFileID,
+		CreatedAt:    timestamppb.New(u.CreatedAt),
+		UpdatedAt:    timestamppb.New(u.UpdatedAt),
 	}
+}
+
+func toPrivateProto(u *model.User) *userv1.User {
+	p := toPublicProto(u)
+	p.UserInfo.Email = u.Info.Email
+	return p
 }
 
 // ParseUserIDString converts JWT user_id claim.

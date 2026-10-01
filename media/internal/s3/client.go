@@ -8,36 +8,44 @@ import (
 	"time"
 
 	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/cors"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 
 	"media/internal/config"
 )
 
 type Client struct {
-	mc                 *minio.Client
-	public             *minio.Client
-	bucket             string
-	maxUploadBytes     int64
-	allowedMimePrefix  []string
-	publicEndpointHost string
+	mc                *minio.Client
+	public            *minio.Client
+	bucket            string
+	maxUploadBytes    int64
+	allowedMimePrefix []string
 }
 
 func New(cfg config.S3Config) (*Client, error) {
 	mc, err := minio.New(cfg.Endpoint(), &minio.Options{
-		Creds:  credentials.NewStaticV4(cfg.AccessKey(), cfg.SecretKey(), ""),
-		Secure: cfg.UseSSL(),
+		Creds:        credentials.NewStaticV4(cfg.AccessKey(), cfg.SecretKey(), ""),
+		Secure:       cfg.UseSSL(),
+		Region:       "us-east-1",
+		BucketLookup: minio.BucketLookupPath,
 	})
 	if err != nil {
 		return nil, err
 	}
+
+	// Public client signs URLs for the browser (localhost:9000). Region is fixed so
+	// minio-go does not dial the public host from inside the media container.
 	publicEP := cfg.PublicEndpoint()
 	public, err := minio.New(publicEP, &minio.Options{
-		Creds:  credentials.NewStaticV4(cfg.AccessKey(), cfg.SecretKey(), ""),
-		Secure: cfg.UseSSL(),
+		Creds:        credentials.NewStaticV4(cfg.AccessKey(), cfg.SecretKey(), ""),
+		Secure:       cfg.UseSSL(),
+		Region:       "us-east-1",
+		BucketLookup: minio.BucketLookupPath,
 	})
 	if err != nil {
 		return nil, err
 	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	exists, err := mc.BucketExists(ctx, cfg.Bucket())
@@ -49,11 +57,20 @@ func New(cfg config.S3Config) (*Client, error) {
 			return nil, err
 		}
 	}
+	_ = mc.SetBucketCors(ctx, cfg.Bucket(), &cors.Config{
+		CORSRules: []cors.Rule{{
+			AllowedOrigin: []string{"*"},
+			AllowedMethod: []string{"GET", "PUT", "HEAD", "POST"},
+			AllowedHeader: []string{"*"},
+			ExposeHeader:  []string{"ETag", "Content-Length"},
+			MaxAgeSeconds: 3600,
+		}},
+	})
+
 	prefixes := cfg.AllowedMimePrefixes()
 	return &Client{
 		mc: mc, public: public, bucket: cfg.Bucket(),
 		maxUploadBytes: cfg.MaxUploadBytes(), allowedMimePrefix: prefixes,
-		publicEndpointHost: publicEP,
 	}, nil
 }
 

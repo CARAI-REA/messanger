@@ -14,16 +14,20 @@ type OutboxEvent struct {
 }
 
 type ChatRepository interface {
-	CreateChat(ctx context.Context, ownerID int64, name, description string, memberIDs []int64, buildEvents func(chatID int64) ([]OutboxEvent, error)) (int64, error)
+	CreateChat(ctx context.Context, ownerID int64, name, description string, chatType int16, memberIDs []int64, buildEvents func(chatID int64) ([]OutboxEvent, error)) (int64, error)
+	GetOrCreateDirect(ctx context.Context, userA, userB int64, buildEvents func(chatID int64) ([]OutboxEvent, error)) (int64, error)
+	UpdateChat(ctx context.Context, chatID, actorID int64, name, description, avatarFileID *string) error
 	SoftDeleteChat(ctx context.Context, chatID, actorID int64) error
 	GetChat(ctx context.Context, chatID, userID int64) (*model.Chat, []int64, error)
+	GetChatType(ctx context.Context, chatID int64) (int16, error)
+	GetMemberRole(ctx context.Context, chatID, userID int64) (int32, error)
 	ListChats(ctx context.Context, userID int64, cursor string, limit int32) ([]model.Chat, string, error)
 	ListChatIDs(ctx context.Context, userID int64) ([]int64, error)
 	AddMember(ctx context.Context, chatID, userID int64, role int32, events []OutboxEvent) error
 	RemoveMember(ctx context.Context, chatID, userID int64, events []OutboxEvent) error
 	UpdateMemberRole(ctx context.Context, chatID, userID int64, role int32, events []OutboxEvent) error
 	IsMember(ctx context.Context, chatID, userID int64) (bool, error)
-	SendMessage(ctx context.Context, chatID, senderID int64, text, idemKey string, attachments []string, buildEvent func(m *model.Message) (*OutboxEvent, error)) (*model.Message, bool, error)
+	SendMessage(ctx context.Context, chatID, senderID int64, text, idemKey string, attachments []string, replyTo int64, buildEvent func(m *model.Message) (*OutboxEvent, error)) (*model.Message, bool, error)
 	EditMessage(ctx context.Context, messageID, actorID int64, text string, buildEvents func(m *model.Message) ([]OutboxEvent, error)) (*model.Message, error)
 	DeleteMessage(ctx context.Context, messageID, actorID int64, buildEvents func(m *model.Message) ([]OutboxEvent, error)) (*model.Message, error)
 	PinMessage(ctx context.Context, messageID, actorID int64, pinned bool, buildEvents func(m *model.Message) ([]OutboxEvent, error)) (*model.Message, error)

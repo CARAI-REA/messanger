@@ -20,21 +20,23 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ChatService_CreateChat_FullMethodName      = "/chat.v1.ChatService/CreateChat"
-	ChatService_DeleteChat_FullMethodName      = "/chat.v1.ChatService/DeleteChat"
-	ChatService_GetChat_FullMethodName         = "/chat.v1.ChatService/GetChat"
-	ChatService_ListChats_FullMethodName       = "/chat.v1.ChatService/ListChats"
-	ChatService_ListChatIDs_FullMethodName     = "/chat.v1.ChatService/ListChatIDs"
-	ChatService_AddUser_FullMethodName         = "/chat.v1.ChatService/AddUser"
-	ChatService_RemoveUser_FullMethodName      = "/chat.v1.ChatService/RemoveUser"
-	ChatService_UpdateUserRole_FullMethodName  = "/chat.v1.ChatService/UpdateUserRole"
-	ChatService_SendMessage_FullMethodName     = "/chat.v1.ChatService/SendMessage"
-	ChatService_EditMessage_FullMethodName     = "/chat.v1.ChatService/EditMessage"
-	ChatService_DeleteMessage_FullMethodName   = "/chat.v1.ChatService/DeleteMessage"
-	ChatService_PinMessage_FullMethodName      = "/chat.v1.ChatService/PinMessage"
-	ChatService_ListMessages_FullMethodName    = "/chat.v1.ChatService/ListMessages"
-	ChatService_MarkRead_FullMethodName        = "/chat.v1.ChatService/MarkRead"
-	ChatService_GetUnreadCounts_FullMethodName = "/chat.v1.ChatService/GetUnreadCounts"
+	ChatService_CreateChat_FullMethodName            = "/chat.v1.ChatService/CreateChat"
+	ChatService_GetOrCreateDirectChat_FullMethodName = "/chat.v1.ChatService/GetOrCreateDirectChat"
+	ChatService_UpdateChat_FullMethodName            = "/chat.v1.ChatService/UpdateChat"
+	ChatService_DeleteChat_FullMethodName            = "/chat.v1.ChatService/DeleteChat"
+	ChatService_GetChat_FullMethodName               = "/chat.v1.ChatService/GetChat"
+	ChatService_ListChats_FullMethodName             = "/chat.v1.ChatService/ListChats"
+	ChatService_ListChatIDs_FullMethodName           = "/chat.v1.ChatService/ListChatIDs"
+	ChatService_AddUser_FullMethodName               = "/chat.v1.ChatService/AddUser"
+	ChatService_RemoveUser_FullMethodName            = "/chat.v1.ChatService/RemoveUser"
+	ChatService_UpdateUserRole_FullMethodName        = "/chat.v1.ChatService/UpdateUserRole"
+	ChatService_SendMessage_FullMethodName           = "/chat.v1.ChatService/SendMessage"
+	ChatService_EditMessage_FullMethodName           = "/chat.v1.ChatService/EditMessage"
+	ChatService_DeleteMessage_FullMethodName         = "/chat.v1.ChatService/DeleteMessage"
+	ChatService_PinMessage_FullMethodName            = "/chat.v1.ChatService/PinMessage"
+	ChatService_ListMessages_FullMethodName          = "/chat.v1.ChatService/ListMessages"
+	ChatService_MarkRead_FullMethodName              = "/chat.v1.ChatService/MarkRead"
+	ChatService_GetUnreadCounts_FullMethodName       = "/chat.v1.ChatService/GetUnreadCounts"
 )
 
 // ChatServiceClient is the client API for ChatService service.
@@ -42,6 +44,8 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ChatServiceClient interface {
 	CreateChat(ctx context.Context, in *CreateChatRequest, opts ...grpc.CallOption) (*CreateChatResponse, error)
+	GetOrCreateDirectChat(ctx context.Context, in *GetOrCreateDirectChatRequest, opts ...grpc.CallOption) (*CreateChatResponse, error)
+	UpdateChat(ctx context.Context, in *UpdateChatRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	DeleteChat(ctx context.Context, in *DeleteChatRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetChat(ctx context.Context, in *GetChatRequest, opts ...grpc.CallOption) (*GetChatResponse, error)
 	ListChats(ctx context.Context, in *ListChatsRequest, opts ...grpc.CallOption) (*ListChatsResponse, error)
@@ -70,6 +74,26 @@ func (c *chatServiceClient) CreateChat(ctx context.Context, in *CreateChatReques
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CreateChatResponse)
 	err := c.cc.Invoke(ctx, ChatService_CreateChat_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *chatServiceClient) GetOrCreateDirectChat(ctx context.Context, in *GetOrCreateDirectChatRequest, opts ...grpc.CallOption) (*CreateChatResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateChatResponse)
+	err := c.cc.Invoke(ctx, ChatService_GetOrCreateDirectChat_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *chatServiceClient) UpdateChat(ctx context.Context, in *UpdateChatRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, ChatService_UpdateChat_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -221,6 +245,8 @@ func (c *chatServiceClient) GetUnreadCounts(ctx context.Context, in *GetUnreadCo
 // for forward compatibility.
 type ChatServiceServer interface {
 	CreateChat(context.Context, *CreateChatRequest) (*CreateChatResponse, error)
+	GetOrCreateDirectChat(context.Context, *GetOrCreateDirectChatRequest) (*CreateChatResponse, error)
+	UpdateChat(context.Context, *UpdateChatRequest) (*emptypb.Empty, error)
 	DeleteChat(context.Context, *DeleteChatRequest) (*emptypb.Empty, error)
 	GetChat(context.Context, *GetChatRequest) (*GetChatResponse, error)
 	ListChats(context.Context, *ListChatsRequest) (*ListChatsResponse, error)
@@ -247,6 +273,12 @@ type UnimplementedChatServiceServer struct{}
 
 func (UnimplementedChatServiceServer) CreateChat(context.Context, *CreateChatRequest) (*CreateChatResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateChat not implemented")
+}
+func (UnimplementedChatServiceServer) GetOrCreateDirectChat(context.Context, *GetOrCreateDirectChatRequest) (*CreateChatResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetOrCreateDirectChat not implemented")
+}
+func (UnimplementedChatServiceServer) UpdateChat(context.Context, *UpdateChatRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateChat not implemented")
 }
 func (UnimplementedChatServiceServer) DeleteChat(context.Context, *DeleteChatRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteChat not implemented")
@@ -325,6 +357,42 @@ func _ChatService_CreateChat_Handler(srv interface{}, ctx context.Context, dec f
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ChatServiceServer).CreateChat(ctx, req.(*CreateChatRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ChatService_GetOrCreateDirectChat_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetOrCreateDirectChatRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServiceServer).GetOrCreateDirectChat(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChatService_GetOrCreateDirectChat_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServiceServer).GetOrCreateDirectChat(ctx, req.(*GetOrCreateDirectChatRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ChatService_UpdateChat_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateChatRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServiceServer).UpdateChat(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChatService_UpdateChat_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServiceServer).UpdateChat(ctx, req.(*UpdateChatRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -591,6 +659,14 @@ var ChatService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateChat",
 			Handler:    _ChatService_CreateChat_Handler,
+		},
+		{
+			MethodName: "GetOrCreateDirectChat",
+			Handler:    _ChatService_GetOrCreateDirectChat_Handler,
+		},
+		{
+			MethodName: "UpdateChat",
+			Handler:    _ChatService_UpdateChat_Handler,
 		},
 		{
 			MethodName: "DeleteChat",

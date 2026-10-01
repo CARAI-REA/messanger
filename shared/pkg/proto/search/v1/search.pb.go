@@ -7,6 +7,7 @@
 package searchv1
 
 import (
+	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -401,7 +402,7 @@ var File_search_v1_search_proto protoreflect.FileDescriptor
 
 const file_search_v1_search_proto_rawDesc = "" +
 	"\n" +
-	"\x16search/v1/search.proto\x12\tsearch.v1\"t\n" +
+	"\x16search/v1/search.proto\x12\tsearch.v1\x1a\x1cgoogle/api/annotations.proto\"t\n" +
 	"\x15SearchMessagesRequest\x12\x14\n" +
 	"\x05query\x18\x01 \x01(\tR\x05query\x12\x17\n" +
 	"\achat_id\x18\x02 \x01(\x03R\x06chatId\x12\x16\n" +
@@ -430,10 +431,10 @@ const file_search_v1_search_proto_rawDesc = "" +
 	"\x13SearchChatsResponse\x12,\n" +
 	"\x04hits\x18\x01 \x03(\v2\x18.search.v1.SearchChatHitR\x04hits\x12\x1f\n" +
 	"\vnext_cursor\x18\x02 \x01(\tR\n" +
-	"nextCursor2\xb4\x01\n" +
-	"\rSearchService\x12U\n" +
-	"\x0eSearchMessages\x12 .search.v1.SearchMessagesRequest\x1a!.search.v1.SearchMessagesResponse\x12L\n" +
-	"\vSearchChats\x12\x1d.search.v1.SearchChatsRequest\x1a\x1e.search.v1.SearchChatsResponseBDZBgithub.com/CARAI-REA/messanger/shared/pkg/proto/search/v1;searchv1b\x06proto3"
+	"nextCursor2\xf3\x01\n" +
+	"\rSearchService\x12v\n" +
+	"\x0eSearchMessages\x12 .search.v1.SearchMessagesRequest\x1a!.search.v1.SearchMessagesResponse\"\x1f\x82\xd3\xe4\x93\x02\x19\x12\x17/api/v1/search/messages\x12j\n" +
+	"\vSearchChats\x12\x1d.search.v1.SearchChatsRequest\x1a\x1e.search.v1.SearchChatsResponse\"\x1c\x82\xd3\xe4\x93\x02\x16\x12\x14/api/v1/search/chatsBDZBgithub.com/CARAI-REA/messanger/shared/pkg/proto/search/v1;searchv1b\x06proto3"
 
 var (
 	file_search_v1_search_proto_rawDescOnce sync.Once

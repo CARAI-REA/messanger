@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 
 	eventsv1 "github.com/CARAI-REA/messanger/shared/pkg/proto/events/v1"
 	"github.com/google/uuid"
@@ -79,17 +80,66 @@ func (s *serv) createChatEvents(chatID, actorID int64, memberIDs []int64) ([]rep
 }
 
 func (s *serv) CreateChat(ctx context.Context, actorID int64, name, description string, memberIDs []int64) (int64, error) {
-	return s.repo.CreateChat(ctx, actorID, name, description, memberIDs, func(chatID int64) ([]repository.OutboxEvent, error) {
+	name = strings.TrimSpace(name)
+	others := 0
+	for _, id := range memberIDs {
+		if id > 0 && id != actorID {
+			others++
+		}
+	}
+	if others < 1 {
+		return 0, fmt.Errorf("group requires at least one other member")
+	}
+	if name == "" {
+		return 0, fmt.Errorf("group name required")
+	}
+	return s.repo.CreateChat(ctx, actorID, name, description, model.ChatTypeGroup, memberIDs, func(chatID int64) ([]repository.OutboxEvent, error) {
 		return s.createChatEvents(chatID, actorID, memberIDs)
 	})
+}
+
+func (s *serv) GetOrCreateDirectChat(ctx context.Context, actorID, peerUserID int64) (int64, error) {
+	if peerUserID <= 0 || peerUserID == actorID {
+		return 0, fmt.Errorf("invalid peer")
+	}
+	return s.repo.GetOrCreateDirect(ctx, actorID, peerUserID, func(chatID int64) ([]repository.OutboxEvent, error) {
+		return s.createChatEvents(chatID, actorID, []int64{peerUserID})
+	})
+}
+
+func (s *serv) requireAdmin(ctx context.Context, chatID, actorID int64) error {
+	role, err := s.repo.GetMemberRole(ctx, chatID, actorID)
+	if err != nil {
+		return err
+	}
+	// ROLE_ADMIN=1, ROLE_OWNER=2
+	if role < 1 {
+		return fmt.Errorf("admin only")
+	}
+	return nil
+}
+
+func (s *serv) UpdateChat(ctx context.Context, actorID, chatID int64, name, description, avatarFileID *string) error {
+	if err := s.requireAdmin(ctx, chatID, actorID); err != nil {
+		return err
+	}
+	return s.repo.UpdateChat(ctx, chatID, actorID, name, description, avatarFileID)
 }
 
 func (s *serv) DeleteChat(ctx context.Context, actorID, chatID int64) error {
 	return s.repo.SoftDeleteChat(ctx, chatID, actorID)
 }
 
-func (s *serv) GetChat(ctx context.Context, actorID, chatID int64) (*model.Chat, []int64, error) {
-	return s.repo.GetChat(ctx, chatID, actorID)
+func (s *serv) GetChat(ctx context.Context, actorID, chatID int64) (*model.Chat, []int64, int32, error) {
+	c, members, err := s.repo.GetChat(ctx, chatID, actorID)
+	if err != nil {
+		return nil, nil, 0, err
+	}
+	role, err := s.repo.GetMemberRole(ctx, chatID, actorID)
+	if err != nil {
+		return nil, nil, 0, err
+	}
+	return c, members, role, nil
 }
 
 func (s *serv) ListChats(ctx context.Context, actorID int64, cursor string, limit int32) ([]model.Chat, string, error) {
@@ -101,9 +151,18 @@ func (s *serv) ListChatIDs(ctx context.Context, actorID int64) ([]int64, error) 
 }
 
 func (s *serv) AddUser(ctx context.Context, actorID, chatID, userID int64, role int32) error {
-	ok, err := s.repo.IsMember(ctx, chatID, actorID)
-	if err != nil || !ok {
-		return fmt.Errorf("not a member")
+	if err := s.requireAdmin(ctx, chatID, actorID); err != nil {
+		return err
+	}
+	typ, err := s.repo.GetChatType(ctx, chatID)
+	if err != nil {
+		return err
+	}
+	if typ == model.ChatTypeDirect {
+		return fmt.Errorf("cannot add members to a direct chat")
+	}
+	if role >= 2 {
+		role = 0 // only owner exists once; new members are regular users
 	}
 	ev := newEvent(chatID, actorID)
 	ev.Payload = &eventsv1.ChatRealtimeEvent_MemberChanged{
@@ -117,9 +176,22 @@ func (s *serv) AddUser(ctx context.Context, actorID, chatID, userID int64, role 
 }
 
 func (s *serv) RemoveUser(ctx context.Context, actorID, chatID, userID int64) error {
-	ok, err := s.repo.IsMember(ctx, chatID, actorID)
-	if err != nil || !ok {
-		return fmt.Errorf("not a member")
+	if err := s.requireAdmin(ctx, chatID, actorID); err != nil {
+		return err
+	}
+	typ, err := s.repo.GetChatType(ctx, chatID)
+	if err != nil {
+		return err
+	}
+	if typ == model.ChatTypeDirect {
+		return fmt.Errorf("cannot remove members from a direct chat")
+	}
+	targetRole, err := s.repo.GetMemberRole(ctx, chatID, userID)
+	if err != nil {
+		return err
+	}
+	if targetRole >= 2 {
+		return fmt.Errorf("cannot remove group owner")
 	}
 	ev := newEvent(chatID, actorID)
 	ev.Payload = &eventsv1.ChatRealtimeEvent_MemberChanged{
@@ -133,9 +205,15 @@ func (s *serv) RemoveUser(ctx context.Context, actorID, chatID, userID int64) er
 }
 
 func (s *serv) UpdateUserRole(ctx context.Context, actorID, chatID, userID int64, role int32) error {
-	ok, err := s.repo.IsMember(ctx, chatID, actorID)
-	if err != nil || !ok {
-		return fmt.Errorf("not a member")
+	if err := s.requireAdmin(ctx, chatID, actorID); err != nil {
+		return err
+	}
+	actorRole, err := s.repo.GetMemberRole(ctx, chatID, actorID)
+	if err != nil {
+		return err
+	}
+	if role >= 2 && actorRole < 2 {
+		return fmt.Errorf("only owner can assign owner")
 	}
 	ev := newEvent(chatID, actorID)
 	ev.Payload = &eventsv1.ChatRealtimeEvent_MemberChanged{
@@ -148,12 +226,12 @@ func (s *serv) UpdateUserRole(ctx context.Context, actorID, chatID, userID int64
 	return s.repo.UpdateMemberRole(ctx, chatID, userID, role, []repository.OutboxEvent{oe})
 }
 
-func (s *serv) SendMessage(ctx context.Context, actorID, chatID int64, text, idemKey string, attachments []string) (int64, error) {
+func (s *serv) SendMessage(ctx context.Context, actorID, chatID int64, text, idemKey string, attachments []string, replyTo int64) (int64, error) {
 	ok, err := s.repo.IsMember(ctx, chatID, actorID)
 	if err != nil || !ok {
 		return 0, fmt.Errorf("not a member")
 	}
-	m, _, err := s.repo.SendMessage(ctx, chatID, actorID, text, idemKey, attachments, func(msg *model.Message) (*repository.OutboxEvent, error) {
+	m, _, err := s.repo.SendMessage(ctx, chatID, actorID, text, idemKey, attachments, replyTo, func(msg *model.Message) (*repository.OutboxEvent, error) {
 		ev := newEvent(chatID, actorID)
 		ev.Payload = &eventsv1.ChatRealtimeEvent_MessageCreated{
 			MessageCreated: &eventsv1.MessageCreated{

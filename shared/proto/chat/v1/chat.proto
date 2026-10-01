@@ -5,12 +5,19 @@ package chat.v1;
 import "google/api/annotations.proto";
 import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
 
 option go_package = "github.com/CARAI-REA/messanger/shared/pkg/proto/chat/v1;chatv1";
 
 service ChatService {
   rpc CreateChat(CreateChatRequest) returns (CreateChatResponse) {
     option (google.api.http) = { post: "/api/v1/chats" body: "*" };
+  }
+  rpc GetOrCreateDirectChat(GetOrCreateDirectChatRequest) returns (CreateChatResponse) {
+    option (google.api.http) = { post: "/api/v1/chats:direct" body: "*" };
+  }
+  rpc UpdateChat(UpdateChatRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = { patch: "/api/v1/chats/{chat_id}" body: "*" };
   }
   rpc DeleteChat(DeleteChatRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = { delete: "/api/v1/chats/{chat_id}" };
@@ -65,6 +72,12 @@ enum Role {
   ROLE_OWNER = 2;
 }
 
+enum ChatType {
+  CHAT_TYPE_UNSPECIFIED = 0;
+  CHAT_TYPE_DIRECT = 1;
+  CHAT_TYPE_GROUP = 2;
+}
+
 message ChatInfo {
   string name = 1;
   string description = 2;
@@ -78,6 +91,11 @@ message Chat {
   google.protobuf.Timestamp last_message_at = 4;
   int64 last_message_id = 5;
   int64 unread_count = 6;
+  ChatType chat_type = 7;
+  string last_message_preview = 8;
+  repeated int64 participant_ids = 9;
+  int64 peer_user_id = 10; // set for DIRECT: the other participant
+  string avatar_file_id = 11;
 }
 
 message Message {
@@ -89,13 +107,25 @@ message Message {
   google.protobuf.Timestamp send_at = 6;
   google.protobuf.Timestamp updated_at = 7;
   repeated string attachment_ids = 8;
+  int64 reply_to_message_id = 9;
 }
 
 message CreateChatRequest { ChatInfo chat_info = 1; }
 message CreateChatResponse { int64 chat_id = 1; }
+message GetOrCreateDirectChatRequest { int64 peer_user_id = 1; }
+message UpdateChatRequest {
+  int64 chat_id = 1;
+  google.protobuf.StringValue name = 2;
+  google.protobuf.StringValue description = 3;
+  google.protobuf.StringValue avatar_file_id = 4;
+}
 message DeleteChatRequest { int64 chat_id = 1; }
 message GetChatRequest { int64 chat_id = 1; }
-message GetChatResponse { Chat chat = 1; repeated int64 participant_ids = 2; }
+message GetChatResponse {
+  Chat chat = 1;
+  repeated int64 participant_ids = 2;
+  Role my_role = 3;
+}
 message ListChatsRequest { string cursor = 1; int32 limit = 2; }
 message ListChatsResponse { repeated Chat chats = 1; string next_cursor = 2; }
 message ListChatIDsRequest {}
@@ -103,7 +133,13 @@ message ListChatIDsResponse { repeated int64 chat_ids = 1; }
 message AddUserRequest { int64 chat_id = 1; int64 user_id = 2; Role role = 3; }
 message RemoveUserRequest { int64 chat_id = 1; int64 user_id = 2; }
 message UpdateUserRoleRequest { int64 chat_id = 1; int64 user_id = 2; Role role = 3; }
-message SendMessageRequest { int64 chat_id = 1; string text = 2; string idempotency_key = 3; repeated string attachment_ids = 4; }
+message SendMessageRequest {
+  int64 chat_id = 1;
+  string text = 2;
+  string idempotency_key = 3;
+  repeated string attachment_ids = 4;
+  int64 reply_to_message_id = 5;
+}
 message SendMessageResponse { int64 message_id = 1; }
 message EditMessageRequest { int64 message_id = 1; string text = 2; }
 message DeleteMessageRequest { int64 message_id = 1; }

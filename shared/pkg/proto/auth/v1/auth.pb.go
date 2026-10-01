@@ -7,6 +7,7 @@
 package authv1
 
 import (
+	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
@@ -350,7 +351,7 @@ var File_auth_v1_auth_proto protoreflect.FileDescriptor
 
 const file_auth_v1_auth_proto_rawDesc = "" +
 	"\n" +
-	"\x12auth/v1/auth.proto\x12\aauth.v1\x1a\x1bgoogle/protobuf/empty.proto\"@\n" +
+	"\x12auth/v1/auth.proto\x12\aauth.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1bgoogle/protobuf/empty.proto\"@\n" +
 	"\fLoginRequest\x12\x14\n" +
 	"\x05email\x18\x01 \x01(\tR\x05email\x12\x1a\n" +
 	"\bpassword\x18\x02 \x01(\tR\bpassword\"W\n" +
@@ -366,13 +367,13 @@ const file_auth_v1_auth_proto_rawDesc = "" +
 	"\x16GetAccessTokenResponse\x12!\n" +
 	"\faccess_token\x18\x01 \x01(\tR\vaccessToken\"4\n" +
 	"\rLogoutRequest\x12#\n" +
-	"\rrefresh_token\x18\x01 \x01(\tR\frefreshToken2\xe9\x02\n" +
-	"\vAuthService\x126\n" +
-	"\x05Login\x12\x15.auth.v1.LoginRequest\x1a\x16.auth.v1.LoginResponse\x12T\n" +
-	"\x0fGetRefreshToken\x12\x1f.auth.v1.GetRefreshTokenRequest\x1a .auth.v1.GetRefreshTokenResponse\x12Q\n" +
-	"\x0eGetAccessToken\x12\x1e.auth.v1.GetAccessTokenRequest\x1a\x1f.auth.v1.GetAccessTokenResponse\x12?\n" +
-	"\rValidateToken\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x128\n" +
-	"\x06Logout\x12\x16.auth.v1.LogoutRequest\x1a\x16.google.protobuf.EmptyB@Z>github.com/CARAI-REA/messanger/shared/pkg/proto/auth/v1;authv1b\x06proto3"
+	"\rrefresh_token\x18\x01 \x01(\tR\frefreshToken2\x88\x04\n" +
+	"\vAuthService\x12U\n" +
+	"\x05Login\x12\x15.auth.v1.LoginRequest\x1a\x16.auth.v1.LoginResponse\"\x1d\x82\xd3\xe4\x93\x02\x17:\x01*\"\x12/api/v1/auth/login\x12u\n" +
+	"\x0fGetRefreshToken\x12\x1f.auth.v1.GetRefreshTokenRequest\x1a .auth.v1.GetRefreshTokenResponse\"\x1f\x82\xd3\xe4\x93\x02\x19:\x01*\"\x14/api/v1/auth/refresh\x12q\n" +
+	"\x0eGetAccessToken\x12\x1e.auth.v1.GetAccessTokenRequest\x1a\x1f.auth.v1.GetAccessTokenResponse\"\x1e\x82\xd3\xe4\x93\x02\x18:\x01*\"\x13/api/v1/auth/access\x12^\n" +
+	"\rValidateToken\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\"\x1d\x82\xd3\xe4\x93\x02\x17\x12\x15/api/v1/auth/validate\x12X\n" +
+	"\x06Logout\x12\x16.auth.v1.LogoutRequest\x1a\x16.google.protobuf.Empty\"\x1e\x82\xd3\xe4\x93\x02\x18:\x01*\"\x13/api/v1/auth/logoutB@Z>github.com/CARAI-REA/messanger/shared/pkg/proto/auth/v1;authv1b\x06proto3"
 
 var (
 	file_auth_v1_auth_proto_rawDescOnce sync.Once

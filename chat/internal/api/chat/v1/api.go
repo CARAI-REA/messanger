@@ -3,6 +3,7 @@ package chatv1api
 import (
 	"context"
 	"strconv"
+	"strings"
 
 	chatv1 "github.com/CARAI-REA/messanger/shared/pkg/proto/chat/v1"
 	"google.golang.org/grpc/codes"
@@ -56,9 +57,48 @@ func (i *Implementation) CreateChat(ctx context.Context, req *chatv1.CreateChatR
 	}
 	id, err := i.svc.CreateChat(ctx, uid, info.Name, info.Description, info.UserIds)
 	if err != nil {
+		if strings.Contains(err.Error(), "required") {
+			return nil, status.Errorf(codes.InvalidArgument, "%v", err)
+		}
 		return nil, status.Errorf(codes.Internal, "%v", err)
 	}
 	return &chatv1.CreateChatResponse{ChatId: id}, nil
+}
+
+func (i *Implementation) GetOrCreateDirectChat(ctx context.Context, req *chatv1.GetOrCreateDirectChatRequest) (*chatv1.CreateChatResponse, error) {
+	uid, err := userIDFromCtx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	id, err := i.svc.GetOrCreateDirectChat(ctx, uid, req.GetPeerUserId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	return &chatv1.CreateChatResponse{ChatId: id}, nil
+}
+
+func (i *Implementation) UpdateChat(ctx context.Context, req *chatv1.UpdateChatRequest) (*emptypb.Empty, error) {
+	uid, err := userIDFromCtx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var name, desc, avatar *string
+	if req.Name != nil {
+		v := req.Name.GetValue()
+		name = &v
+	}
+	if req.Description != nil {
+		v := req.Description.GetValue()
+		desc = &v
+	}
+	if req.AvatarFileId != nil {
+		v := req.AvatarFileId.GetValue()
+		avatar = &v
+	}
+	if err := i.svc.UpdateChat(ctx, uid, req.GetChatId(), name, desc, avatar); err != nil {
+		return nil, status.Errorf(codes.PermissionDenied, "%v", err)
+	}
+	return &emptypb.Empty{}, nil
 }
 
 func (i *Implementation) DeleteChat(ctx context.Context, req *chatv1.DeleteChatRequest) (*emptypb.Empty, error) {
@@ -77,11 +117,15 @@ func (i *Implementation) GetChat(ctx context.Context, req *chatv1.GetChatRequest
 	if err != nil {
 		return nil, err
 	}
-	c, members, err := i.svc.GetChat(ctx, uid, req.GetChatId())
+	c, members, role, err := i.svc.GetChat(ctx, uid, req.GetChatId())
 	if err != nil {
 		return nil, status.Errorf(codes.NotFound, "%v", err)
 	}
-	return &chatv1.GetChatResponse{Chat: toChatProto(c), ParticipantIds: members}, nil
+	return &chatv1.GetChatResponse{
+		Chat:           toChatProto(c),
+		ParticipantIds: members,
+		MyRole:         chatv1.Role(role),
+	}, nil
 }
 
 func (i *Implementation) ListChats(ctx context.Context, req *chatv1.ListChatsRequest) (*chatv1.ListChatsResponse, error) {
@@ -150,7 +194,7 @@ func (i *Implementation) SendMessage(ctx context.Context, req *chatv1.SendMessag
 	if err != nil {
 		return nil, err
 	}
-	id, err := i.svc.SendMessage(ctx, uid, req.GetChatId(), req.GetText(), req.GetIdempotencyKey(), req.GetAttachmentIds())
+	id, err := i.svc.SendMessage(ctx, uid, req.GetChatId(), req.GetText(), req.GetIdempotencyKey(), req.GetAttachmentIds(), req.GetReplyToMessageId())
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "%v", err)
 	}
@@ -236,8 +280,14 @@ func toChatProto(c *model.Chat) *chatv1.Chat {
 		ChatInfo: &chatv1.ChatInfo{
 			Name:        c.Name,
 			Description: c.Description,
+			UserIds:     c.ParticipantIDs,
 		},
-		UnreadCount: c.UnreadCount,
+		UnreadCount:        c.UnreadCount,
+		ChatType:           chatv1.ChatType(c.ChatType),
+		LastMessagePreview: c.LastMessagePreview,
+		ParticipantIds:     c.ParticipantIDs,
+		PeerUserId:         c.PeerUserID,
+		AvatarFileId:       c.AvatarFileID,
 	}
 	if c.LastMessageAt != nil {
 		ch.LastMessageAt = timestamppb.New(*c.LastMessageAt)
@@ -250,13 +300,14 @@ func toChatProto(c *model.Chat) *chatv1.Chat {
 
 func toMessageProto(m *model.Message) *chatv1.Message {
 	return &chatv1.Message{
-		MessageId:     m.ID,
-		SenderId:      m.SenderID,
-		ChatId:        m.ChatID,
-		Text:          m.Text,
-		IsPinned:      m.IsPinned,
-		SendAt:        timestamppb.New(m.SendAt),
-		UpdatedAt:     timestamppb.New(m.UpdatedAt),
-		AttachmentIds: m.AttachmentIDs,
+		MessageId:        m.ID,
+		SenderId:         m.SenderID,
+		ChatId:           m.ChatID,
+		Text:             m.Text,
+		IsPinned:         m.IsPinned,
+		SendAt:           timestamppb.New(m.SendAt),
+		UpdatedAt:        timestamppb.New(m.UpdatedAt),
+		AttachmentIds:    m.AttachmentIDs,
+		ReplyToMessageId: m.ReplyToMessageID,
 	}
 }

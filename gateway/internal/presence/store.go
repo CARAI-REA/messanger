@@ -57,6 +57,42 @@ func (s *Store) IsOnline(userID int64) (bool, error) {
 	return redis.Bool(conn.Do("EXISTS", presenceKey(userID)))
 }
 
+func (s *Store) AreOnline(userIDs []int64) (map[int64]bool, error) {
+	out := make(map[int64]bool, len(userIDs))
+	if len(userIDs) == 0 {
+		return out, nil
+	}
+	conn := s.pool.Get()
+	defer conn.Close()
+	args := make([]any, 0, len(userIDs))
+	for _, id := range userIDs {
+		args = append(args, presenceKey(id))
+	}
+	vals, err := redis.Ints(conn.Do("EXISTS", args...))
+	if err != nil {
+		// fallback per-key for older redis EXISTS multi semantics
+		for _, id := range userIDs {
+			ok, e := s.IsOnline(id)
+			if e != nil {
+				return nil, e
+			}
+			out[id] = ok
+		}
+		return out, nil
+	}
+	// Redis EXISTS with multiple keys returns count of existing keys, not per-key.
+	// So always do pipeline GET/EXISTS per key.
+	_ = vals
+	for _, id := range userIDs {
+		ok, e := redis.Bool(conn.Do("EXISTS", presenceKey(id)))
+		if e != nil {
+			return nil, e
+		}
+		out[id] = ok
+	}
+	return out, nil
+}
+
 func (s *Store) Ping() error {
 	conn := s.pool.Get()
 	defer conn.Close()

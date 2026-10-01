@@ -8,14 +8,16 @@ import (
 
 type ChatService interface {
 	CreateChat(ctx context.Context, actorID int64, name, description string, memberIDs []int64) (int64, error)
+	GetOrCreateDirectChat(ctx context.Context, actorID, peerUserID int64) (int64, error)
+	UpdateChat(ctx context.Context, actorID, chatID int64, name, description, avatarFileID *string) error
 	DeleteChat(ctx context.Context, actorID, chatID int64) error
-	GetChat(ctx context.Context, actorID, chatID int64) (*model.Chat, []int64, error)
+	GetChat(ctx context.Context, actorID, chatID int64) (*model.Chat, []int64, int32, error)
 	ListChats(ctx context.Context, actorID int64, cursor string, limit int32) ([]model.Chat, string, error)
 	ListChatIDs(ctx context.Context, actorID int64) ([]int64, error)
 	AddUser(ctx context.Context, actorID, chatID, userID int64, role int32) error
 	RemoveUser(ctx context.Context, actorID, chatID, userID int64) error
 	UpdateUserRole(ctx context.Context, actorID, chatID, userID int64, role int32) error
-	SendMessage(ctx context.Context, actorID, chatID int64, text, idemKey string, attachments []string) (int64, error)
+	SendMessage(ctx context.Context, actorID, chatID int64, text, idemKey string, attachments []string, replyTo int64) (int64, error)
 	EditMessage(ctx context.Context, actorID, messageID int64, text string) error
 	DeleteMessage(ctx context.Context, actorID, messageID int64) error
 	PinMessage(ctx context.Context, actorID, messageID int64, pinned bool) error
