@@ -9,6 +9,8 @@ lint:
     - RPC_REQUEST_RESPONSE_UNIQUE
     - PACKAGE_VERSION_SUFFIX
     - PACKAGE_DIRECTORY_MATCH
+    # ROLE_USER=0 is intentional (stored in DB); renaming zero would break existing roles.
+    - ENUM_ZERO_VALUE_SUFFIX
 breaking:
   use:
     - FILE

@@ -1,6 +1,6 @@
-import { useQueries, useQuery } from '@tanstack/react-query'
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import { getUser } from '@/api/auth'
-import { listChats, isDirectChat, type Chat } from '@/api/chat'
+import { listChats, isDirectChat, pinChat, type Chat } from '@/api/chat'
 import { useAuthStore } from '@/store/authStore'
 import { useUIStore } from '@/store/uiStore'
 import { formatTime } from '@/lib/format'
@@ -13,6 +13,15 @@ function chatTitle(chat: Chat, peerName?: string): string {
   return chat.chatInfo?.name || `Group #${chat.chatId}`
 }
 
+function sortChats(chats: Chat[]): Chat[] {
+  return [...chats].sort((a, b) => {
+    if (!!a.isPinned !== !!b.isPinned) return a.isPinned ? -1 : 1
+    const at = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0
+    const bt = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0
+    return bt - at
+  })
+}
+
 function ChatRow({
   chat,
   active,
@@ -20,6 +29,8 @@ function ChatRow({
   peerUsername,
   peerAvatarFileId,
   peerId,
+  onTogglePin,
+  pinPending,
 }: {
   chat: Chat
   active: boolean
@@ -27,6 +38,8 @@ function ChatRow({
   peerUsername?: string
   peerAvatarFileId?: string
   peerId?: number
+  onTogglePin: () => void
+  pinPending: boolean
 }) {
   const setActive = useUIStore((s) => s.setActiveChat)
   const openProfile = useUIStore((s) => s.openProfile)
@@ -38,7 +51,7 @@ function ChatRow({
   return (
     <button
       type="button"
-      className={`chat-item${active ? ' active' : ''}`}
+      className={`chat-item${active ? ' active' : ''}${chat.isPinned ? ' pinned' : ''}`}
       onClick={() => setActive(chat.chatId)}
     >
       <Avatar
@@ -55,25 +68,68 @@ function ChatRow({
         }
       />
       <div className="chat-item-main">
-        <div className="chat-item-title">{title}</div>
+        <div className="chat-item-title">
+          {chat.isPinned ? <span className="chat-pin-mark" aria-hidden /> : null}
+          {title}
+        </div>
         <div className="chat-item-preview">{preview}</div>
       </div>
       <div className="chat-item-meta">
         <span className="chat-item-time">{formatTime(chat.lastMessageAt)}</span>
-        {!!chat.unreadCount && chat.unreadCount > 0 && (
-          <span className="badge">{chat.unreadCount > 99 ? '99+' : chat.unreadCount}</span>
-        )}
+        <div className="chat-item-meta-row">
+          <button
+            type="button"
+            className={`chat-pin-btn${chat.isPinned ? ' on' : ''}`}
+            title={chat.isPinned ? 'Unpin chat' : 'Pin chat'}
+            disabled={pinPending}
+            onClick={(e) => {
+              e.stopPropagation()
+              onTogglePin()
+            }}
+          >
+            {chat.isPinned ? 'Unpin' : 'Pin'}
+          </button>
+          {!!chat.unreadCount && chat.unreadCount > 0 && (
+            <span className="badge">{chat.unreadCount > 99 ? '99+' : chat.unreadCount}</span>
+          )}
+        </div>
       </div>
     </button>
   )
 }
 
 export function ChatList({ filter }: { filter: string }) {
+  const qc = useQueryClient()
   const activeChatId = useUIStore((s) => s.activeChatId)
   const myId = useAuthStore((s) => s.userId)
   const { data, isLoading } = useQuery({
     queryKey: ['chats'],
     queryFn: () => listChats(80),
+  })
+
+  const pinMut = useMutation({
+    mutationFn: ({ chatId, isPinned }: { chatId: number; isPinned: boolean }) =>
+      pinChat(chatId, isPinned),
+    onMutate: async ({ chatId, isPinned }) => {
+      await qc.cancelQueries({ queryKey: ['chats'] })
+      const prev = qc.getQueryData<{ chats?: Chat[] }>(['chats'])
+      qc.setQueryData<{ chats?: Chat[] }>(['chats'], (old) => {
+        if (!old?.chats) return old
+        return {
+          ...old,
+          chats: sortChats(
+            old.chats.map((c) => (c.chatId === chatId ? { ...c, isPinned } : c)),
+          ),
+        }
+      })
+      return { prev }
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) qc.setQueryData(['chats'], ctx.prev)
+    },
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ['chats'] })
+    },
   })
 
   const chats = data?.chats ?? []
@@ -109,13 +165,15 @@ export function ChatList({ filter }: { filter: string }) {
     }
   })
 
-  const filtered = chats.filter((c) => {
-    if (!filter.trim()) return true
-    const peer = c.peerUserId ? peerMap.get(c.peerUserId) : undefined
-    const title = chatTitle(c, peer?.name)
-    const hay = `${title} ${peer?.username || ''} ${c.lastMessagePreview || ''}`.toLowerCase()
-    return hay.includes(filter.toLowerCase())
-  })
+  const filtered = sortChats(
+    chats.filter((c) => {
+      if (!filter.trim()) return true
+      const peer = c.peerUserId ? peerMap.get(c.peerUserId) : undefined
+      const title = chatTitle(c, peer?.name)
+      const hay = `${title} ${peer?.username || ''} ${c.lastMessagePreview || ''}`.toLowerCase()
+      return hay.includes(filter.toLowerCase())
+    }),
+  )
 
   if (isLoading) {
     return (
@@ -148,6 +206,10 @@ export function ChatList({ filter }: { filter: string }) {
             peerUsername={peer?.username}
             peerAvatarFileId={peer?.avatarFileId}
             peerId={c.peerUserId}
+            pinPending={pinMut.isPending && pinMut.variables?.chatId === c.chatId}
+            onTogglePin={() =>
+              pinMut.mutate({ chatId: c.chatId, isPinned: !c.isPinned })
+            }
           />
         )
       })}

@@ -21,7 +21,7 @@ service UserService {
       get: "/api/v1/users/{id}"
     };
   }
-  rpc GetMe(google.protobuf.Empty) returns (GetResponse) {
+  rpc GetMe(GetMeRequest) returns (GetResponse) {
     option (google.api.http) = {
       get: "/api/v1/users/me"
     };
@@ -48,7 +48,7 @@ service UserService {
       body: "*"
     };
   }
-  rpc Delete(google.protobuf.Empty) returns (google.protobuf.Empty) {
+  rpc Delete(DeleteRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {
       delete: "/api/v1/users/me"
     };
@@ -84,6 +84,10 @@ message CreateResponse {
 message GetRequest {
   int64 id = 1;
 }
+
+message GetMeRequest {}
+
+message DeleteRequest {}
 
 message GetByUsernameRequest {
   string username = 1;
