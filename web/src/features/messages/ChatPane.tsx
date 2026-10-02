@@ -29,6 +29,7 @@ import { MessageAttachments } from '@/features/messages/MessageAttachments'
 import { upsertChatMessage } from '@/ws/client'
 
 const PAGE_SIZE = 20
+const EMPTY_TYPING: number[] = []
 
 type MessagesPages = InfiniteData<{ messages: Message[]; hasMore: boolean }, number | undefined>
 
@@ -40,7 +41,8 @@ export function ChatPane({
   onPresenceSubscribe: (userIds: number[]) => void
 }) {
   const chatId = useUIStore((s) => s.activeChatId)
-  const typingChatId = useUIStore((s) => s.typingChatId)
+  const typingByChat = useUIStore((s) => s.typingByChat)
+  const typingUserIds = (chatId && typingByChat[chatId]) || EMPTY_TYPING
   const setMobileView = useUIStore((s) => s.setMobileView)
   const showToast = useUIStore((s) => s.showToast)
   const infoOpen = useUIStore((s) => s.infoOpen)
@@ -169,10 +171,14 @@ export function ChatPane({
       const n = Number(m.senderId)
       if (n) ids.add(n)
     }
+    for (const id of typingUserIds) {
+      const n = Number(id)
+      if (n) ids.add(n)
+    }
     if (peerId) ids.add(peerId)
     if (myId) ids.add(myId)
     return Array.from(ids)
-  }, [chatQuery.data?.participantIds, messages, myId, peerId])
+  }, [chatQuery.data?.participantIds, messages, myId, peerId, typingUserIds])
 
   const senderQueries = useQueries({
     queries: senderIds.map((id) => ({
@@ -290,7 +296,7 @@ export function ChatPane({
       setReplyTo(null)
       stickBottom.current = true
       if (res.messageId && chatId && myId) {
-        upsertChatMessage(qc, {
+        const incoming = {
           messageId: res.messageId,
           senderId: myId,
           chatId,
@@ -298,9 +304,34 @@ export function ChatPane({
           attachmentIds: res.attachmentIds ?? [],
           replyToMessageId: res.replyTo,
           sendAt: new Date().toISOString(),
+        }
+        upsertChatMessage(qc, incoming)
+        qc.setQueryData(['chats'], (old: { chats?: Array<Record<string, unknown>> } | undefined) => {
+          if (!old?.chats) return old
+          const preview = incoming.text || (incoming.attachmentIds.length ? '🖼 Photo' : '')
+          const chats = old.chats.map((c) =>
+            Number(c.chatId) === chatId
+              ? {
+                  ...c,
+                  lastMessagePreview: preview || c.lastMessagePreview,
+                  lastMessageAt: incoming.sendAt,
+                  lastMessageId: incoming.messageId,
+                }
+              : c,
+          )
+          return {
+            ...old,
+            chats: [...chats].sort((a, b) => {
+              const ap = !!(a.isPinned ?? a.is_pinned)
+              const bp = !!(b.isPinned ?? b.is_pinned)
+              if (ap !== bp) return ap ? -1 : 1
+              const at = a.lastMessageAt ? new Date(String(a.lastMessageAt)).getTime() : 0
+              const bt = b.lastMessageAt ? new Date(String(b.lastMessageAt)).getTime() : 0
+              return bt - at
+            }),
+          }
         })
       }
-      qc.invalidateQueries({ queryKey: ['chats'] })
       requestAnimationFrame(() => pinToBottom())
     },
     onError: () => showToast('Failed to send'),
@@ -312,7 +343,7 @@ export function ChatPane({
         <div className="empty-pane">
           <div className="mark">M</div>
           <h2>Messanger</h2>
-          <p>Select a chat to start messaging</p>
+          <p>Pick a conversation from the left, or start a new one.</p>
         </div>
       </div>
     )
@@ -328,8 +359,22 @@ export function ChatPane({
     : chat?.chatInfo?.name || `Group #${chatId}`
 
   const peerOnline = peerId ? !!onlineUsers[peerId] : false
-  const typing = typingChatId === chatId
-  const subtitle = typing ? 'typing…' : direct ? (peerOnline ? 'online' : 'offline') : 'group'
+  const typingNames = typingUserIds
+    .filter((id) => id !== myId)
+    .map((id) => {
+      const u = sendersById.get(id)
+      return u?.userInfo?.name || (u?.userInfo?.username ? `@${u.userInfo.username}` : `User #${id}`)
+    })
+  const typingLabel =
+    typingNames.length === 0
+      ? null
+      : typingNames.length === 1
+        ? `${typingNames[0]} is typing…`
+        : typingNames.length === 2
+          ? `${typingNames[0]} and ${typingNames[1]} are typing…`
+          : `${typingNames[0]} and ${typingNames.length - 1} others are typing…`
+  const subtitle =
+    typingLabel || (direct ? (peerOnline ? 'online' : 'offline') : 'group')
 
   const replyMsg = replyToId ? byId.get(replyToId) : undefined
 
@@ -404,7 +449,7 @@ export function ChatPane({
           onClick={() => setInfoOpen(true)}
         >
           <h2>{title}</h2>
-          <div className="sub">{subtitle}</div>
+          <div className={`sub${typingLabel ? ' is-typing' : ''}`}>{subtitle}</div>
         </div>
       </div>
 
