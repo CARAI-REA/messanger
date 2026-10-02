@@ -26,7 +26,7 @@ service AuthService {
       body: "*"
     };
   }
-  rpc ValidateToken(google.protobuf.Empty) returns (google.protobuf.Empty) {
+  rpc ValidateToken(ValidateTokenRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {
       get: "/api/v1/auth/validate"
     };
@@ -68,3 +68,5 @@ message GetAccessTokenResponse {
 message LogoutRequest {
   string refresh_token = 1;
 }
+
+message ValidateTokenRequest {}
