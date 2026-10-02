@@ -11,10 +11,14 @@ type UIState = {
   profileUserId: number | null
   /** chatId -> userIds currently typing */
   typingByChat: Record<number, number[]>
+  /** jump+highlight this message after opening a chat (from search) */
+  focusMessageId: number | null
   replyToId: number | null
   onlineUsers: Record<number, boolean>
   toast: string | null
   setActiveChat: (id: number | null) => void
+  openChatAtMessage: (chatId: number, messageId: number) => void
+  clearFocusMessage: () => void
   setMobileView: (v: 'list' | 'chat') => void
   setNewChatOpen: (v: boolean) => void
   setNewGroupOpen: (v: boolean) => void
@@ -39,6 +43,7 @@ export const useUIStore = create<UIState>((set) => ({
   infoOpen: false,
   profileUserId: null,
   typingByChat: {},
+  focusMessageId: null,
   replyToId: null,
   onlineUsers: {},
   toast: null,
@@ -49,8 +54,23 @@ export const useUIStore = create<UIState>((set) => ({
       mobileView: activeChatId ? 'chat' : 'list',
       infoOpen: false,
       replyToId: null,
+      focusMessageId: null,
     })
   },
+  openChatAtMessage: (chatId, messageId) => {
+    const cid = Number(chatId)
+    const mid = Number(messageId)
+    if (!cid || !mid) return
+    set({
+      activeChatId: cid,
+      focusMessageId: mid,
+      mobileView: 'chat',
+      searchOpen: false,
+      infoOpen: false,
+      replyToId: null,
+    })
+  },
+  clearFocusMessage: () => set({ focusMessageId: null }),
   setMobileView: (mobileView) => set({ mobileView }),
   setNewChatOpen: (newChatOpen) => set({ newChatOpen }),
   setNewGroupOpen: (newGroupOpen) => set({ newGroupOpen }),
