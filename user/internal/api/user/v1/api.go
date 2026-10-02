@@ -70,7 +70,7 @@ func (i *Implementation) Get(ctx context.Context, req *userv1.GetRequest) (*user
 	return &userv1.GetResponse{User: toPublicProto(u)}, nil
 }
 
-func (i *Implementation) GetMe(ctx context.Context, _ *emptypb.Empty) (*userv1.GetResponse, error) {
+func (i *Implementation) GetMe(ctx context.Context, _ *userv1.GetMeRequest) (*userv1.GetResponse, error) {
 	id, err := userIDFromCtx(ctx)
 	if err != nil {
 		return nil, err
@@ -148,7 +148,7 @@ func (i *Implementation) UpdatePassword(ctx context.Context, req *userv1.UpdateP
 	return &emptypb.Empty{}, nil
 }
 
-func (i *Implementation) Delete(ctx context.Context, _ *emptypb.Empty) (*emptypb.Empty, error) {
+func (i *Implementation) Delete(ctx context.Context, _ *userv1.DeleteRequest) (*emptypb.Empty, error) {
 	id, err := userIDFromCtx(ctx)
 	if err != nil {
 		return nil, err

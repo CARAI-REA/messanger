@@ -27,6 +27,7 @@ type ChatRepository interface {
 	RemoveMember(ctx context.Context, chatID, userID int64, events []OutboxEvent) error
 	UpdateMemberRole(ctx context.Context, chatID, userID int64, role int32, events []OutboxEvent) error
 	IsMember(ctx context.Context, chatID, userID int64) (bool, error)
+	SetChatPinned(ctx context.Context, chatID, userID int64, pinned bool) error
 	SendMessage(ctx context.Context, chatID, senderID int64, text, idemKey string, attachments []string, replyTo int64, buildEvent func(m *model.Message) (*OutboxEvent, error)) (*model.Message, bool, error)
 	EditMessage(ctx context.Context, messageID, actorID int64, text string, buildEvents func(m *model.Message) ([]OutboxEvent, error)) (*model.Message, error)
 	DeleteMessage(ctx context.Context, messageID, actorID int64, buildEvents func(m *model.Message) ([]OutboxEvent, error)) (*model.Message, error)

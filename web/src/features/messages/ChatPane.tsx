@@ -29,6 +29,7 @@ import { MessageAttachments } from '@/features/messages/MessageAttachments'
 import { upsertChatMessage } from '@/ws/client'
 
 const PAGE_SIZE = 20
+const EMPTY_TYPING: number[] = []
 
 type MessagesPages = InfiniteData<{ messages: Message[]; hasMore: boolean }, number | undefined>
 
@@ -40,7 +41,10 @@ export function ChatPane({
   onPresenceSubscribe: (userIds: number[]) => void
 }) {
   const chatId = useUIStore((s) => s.activeChatId)
-  const typingChatId = useUIStore((s) => s.typingChatId)
+  const focusMessageId = useUIStore((s) => s.focusMessageId)
+  const clearFocusMessage = useUIStore((s) => s.clearFocusMessage)
+  const typingByChat = useUIStore((s) => s.typingByChat)
+  const typingUserIds = (chatId && typingByChat[chatId]) || EMPTY_TYPING
   const setMobileView = useUIStore((s) => s.setMobileView)
   const showToast = useUIStore((s) => s.showToast)
   const infoOpen = useUIStore((s) => s.infoOpen)
@@ -74,7 +78,8 @@ export function ChatPane({
   const scrollToMessage = (messageId: number) => {
     const container = listRef.current
     if (!container) return false
-    const el = container.querySelector(`[data-mid="${messageId}"]`) as HTMLElement | null
+    const mid = Number(messageId)
+    const el = container.querySelector(`[data-mid="${mid}"]`) as HTMLElement | null
     if (!el) return false
     stickBottom.current = false
     historyReady.current = true
@@ -83,8 +88,8 @@ export function ChatPane({
     const next =
       container.scrollTop + (eRect.top - cRect.top) - Math.min(120, container.clientHeight / 4)
     container.scrollTo({ top: Math.max(0, next), behavior: 'smooth' })
-    setHighlightId(messageId)
-    window.setTimeout(() => setHighlightId((cur) => (cur === messageId ? null : cur)), 1800)
+    setHighlightId(mid)
+    window.setTimeout(() => setHighlightId((cur) => (cur === mid ? null : cur)), 2200)
     return true
   }
 
@@ -119,11 +124,18 @@ export function ChatPane({
     historyReady.current = false
     loadingOlder.current = false
     setPinIndex(0)
-    setJumpToId(null)
-    setHighlightId(null)
     setMenuId(null)
     setEditingId(null)
     setText('')
+    // Keep pending search jump; otherwise reset local jump/highlight.
+    const pendingFocus = useUIStore.getState().focusMessageId
+    if (pendingFocus) {
+      setJumpToId(pendingFocus)
+      setHighlightId(null)
+    } else {
+      setJumpToId(null)
+      setHighlightId(null)
+    }
     qc.setQueryData<MessagesPages>(['messages', chatId], (old) => {
       if (!old?.pages?.length) return old
       return {
@@ -132,6 +144,12 @@ export function ChatPane({
       }
     })
   }, [chatId, qc])
+
+  // Jump to a message requested from global search (same chat or after switch).
+  useEffect(() => {
+    if (!chatId || !focusMessageId) return
+    setJumpToId(focusMessageId)
+  }, [chatId, focusMessageId])
 
   const messagesQuery = useInfiniteQuery({
     queryKey: ['messages', chatId],
@@ -169,10 +187,14 @@ export function ChatPane({
       const n = Number(m.senderId)
       if (n) ids.add(n)
     }
+    for (const id of typingUserIds) {
+      const n = Number(id)
+      if (n) ids.add(n)
+    }
     if (peerId) ids.add(peerId)
     if (myId) ids.add(myId)
     return Array.from(ids)
-  }, [chatQuery.data?.participantIds, messages, myId, peerId])
+  }, [chatQuery.data?.participantIds, messages, myId, peerId, typingUserIds])
 
   const senderQueries = useQueries({
     queries: senderIds.map((id) => ({
@@ -201,13 +223,13 @@ export function ChatPane({
   }, [senderIds, senderQueries, meQuery.data?.user, myId])
 
   // Glue to bottom while opening / receiving / sending; re-pin when content grows.
+  // Skip while jumping to a searched/pinned message or after user scrolled up.
   useLayoutEffect(() => {
     const root = listRef.current
     const content = contentRef.current
     if (!root || !content || !chatId) return
-    if (jumpToId || loadingOlder.current) return
-
-    stickBottom.current = true
+    if (jumpToId || focusMessageId || loadingOlder.current) return
+    if (!stickBottom.current) return
 
     const pin = () => {
       if (!stickBottom.current) return
@@ -225,7 +247,7 @@ export function ChatPane({
       ro.disconnect()
       window.clearTimeout(t)
     }
-  }, [chatId, lastMessageId, messagesQuery.isFetched, jumpToId])
+  }, [chatId, lastMessageId, messagesQuery.isFetched, jumpToId, focusMessageId])
 
   // Preserve viewport when older pages are prepended.
   useLayoutEffect(() => {
@@ -235,13 +257,22 @@ export function ChatPane({
     loadingOlder.current = false
   }, [messagesQuery.data?.pages.length])
 
-  useEffect(() => {
+  // Resolve jump target: scroll if mounted, otherwise load older pages.
+  useLayoutEffect(() => {
     if (!jumpToId) return
+
     if (scrollToMessage(jumpToId)) {
       setJumpToId(null)
+      clearFocusMessage()
       return
     }
-    if (messagesQuery.hasNextPage && !messagesQuery.isFetchingNextPage) {
+
+    // Initial page still loading — wait.
+    if (!messagesQuery.isFetched || messagesQuery.isLoading || messagesQuery.isFetchingNextPage) {
+      return
+    }
+
+    if (messagesQuery.hasNextPage) {
       const el = listRef.current
       if (el) {
         loadingOlder.current = true
@@ -250,17 +281,20 @@ export function ChatPane({
       void messagesQuery.fetchNextPage()
       return
     }
-    if (!messagesQuery.isFetchingNextPage) {
-      showToast('Pinned message not in loaded history')
-      setJumpToId(null)
-    }
+
+    showToast('Message not found in this chat history')
+    setJumpToId(null)
+    clearFocusMessage()
   }, [
     jumpToId,
     messages,
+    messagesQuery.isFetched,
+    messagesQuery.isLoading,
     messagesQuery.hasNextPage,
     messagesQuery.isFetchingNextPage,
     messagesQuery,
     showToast,
+    clearFocusMessage,
   ])
 
   useEffect(() => {
@@ -290,7 +324,7 @@ export function ChatPane({
       setReplyTo(null)
       stickBottom.current = true
       if (res.messageId && chatId && myId) {
-        upsertChatMessage(qc, {
+        const incoming = {
           messageId: res.messageId,
           senderId: myId,
           chatId,
@@ -298,9 +332,34 @@ export function ChatPane({
           attachmentIds: res.attachmentIds ?? [],
           replyToMessageId: res.replyTo,
           sendAt: new Date().toISOString(),
+        }
+        upsertChatMessage(qc, incoming)
+        qc.setQueryData(['chats'], (old: { chats?: Array<Record<string, unknown>> } | undefined) => {
+          if (!old?.chats) return old
+          const preview = incoming.text || (incoming.attachmentIds.length ? '🖼 Photo' : '')
+          const chats = old.chats.map((c) =>
+            Number(c.chatId) === chatId
+              ? {
+                  ...c,
+                  lastMessagePreview: preview || c.lastMessagePreview,
+                  lastMessageAt: incoming.sendAt,
+                  lastMessageId: incoming.messageId,
+                }
+              : c,
+          )
+          return {
+            ...old,
+            chats: [...chats].sort((a, b) => {
+              const ap = !!(a.isPinned ?? a.is_pinned)
+              const bp = !!(b.isPinned ?? b.is_pinned)
+              if (ap !== bp) return ap ? -1 : 1
+              const at = a.lastMessageAt ? new Date(String(a.lastMessageAt)).getTime() : 0
+              const bt = b.lastMessageAt ? new Date(String(b.lastMessageAt)).getTime() : 0
+              return bt - at
+            }),
+          }
         })
       }
-      qc.invalidateQueries({ queryKey: ['chats'] })
       requestAnimationFrame(() => pinToBottom())
     },
     onError: () => showToast('Failed to send'),
@@ -312,7 +371,7 @@ export function ChatPane({
         <div className="empty-pane">
           <div className="mark">M</div>
           <h2>Messanger</h2>
-          <p>Select a chat to start messaging</p>
+          <p>Pick a conversation from the left, or start a new one.</p>
         </div>
       </div>
     )
@@ -328,8 +387,22 @@ export function ChatPane({
     : chat?.chatInfo?.name || `Group #${chatId}`
 
   const peerOnline = peerId ? !!onlineUsers[peerId] : false
-  const typing = typingChatId === chatId
-  const subtitle = typing ? 'typing…' : direct ? (peerOnline ? 'online' : 'offline') : 'group'
+  const typingNames = typingUserIds
+    .filter((id) => id !== myId)
+    .map((id) => {
+      const u = sendersById.get(id)
+      return u?.userInfo?.name || (u?.userInfo?.username ? `@${u.userInfo.username}` : `User #${id}`)
+    })
+  const typingLabel =
+    typingNames.length === 0
+      ? null
+      : typingNames.length === 1
+        ? `${typingNames[0]} is typing…`
+        : typingNames.length === 2
+          ? `${typingNames[0]} and ${typingNames[1]} are typing…`
+          : `${typingNames[0]} and ${typingNames.length - 1} others are typing…`
+  const subtitle =
+    typingLabel || (direct ? (peerOnline ? 'online' : 'offline') : 'group')
 
   const replyMsg = replyToId ? byId.get(replyToId) : undefined
 
@@ -404,7 +477,7 @@ export function ChatPane({
           onClick={() => setInfoOpen(true)}
         >
           <h2>{title}</h2>
-          <div className="sub">{subtitle}</div>
+          <div className={`sub${typingLabel ? ' is-typing' : ''}`}>{subtitle}</div>
         </div>
       </div>
 
@@ -491,7 +564,7 @@ export function ChatPane({
                 <div className={`bubble-row ${mine ? 'out' : 'in'}${clusterEnd ? ' tail' : ''}`}>
                   {!mine && avatar}
                   <div
-                    className={`bubble ${mine ? 'out' : 'in'}${highlightId === m.messageId ? ' highlight' : ''}`}
+                    className={`bubble ${mine ? 'out' : 'in'}${Number(highlightId) === Number(m.messageId) ? ' highlight' : ''}`}
                     onContextMenu={(e) => {
                       e.preventDefault()
                       setMenuId(m.messageId)

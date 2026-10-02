@@ -20,7 +20,8 @@ export function MessengerShell() {
   const setNewGroupOpen = useUIStore((s) => s.setNewGroupOpen)
   const setSearchOpen = useUIStore((s) => s.setSearchOpen)
   const openProfile = useUIStore((s) => s.openProfile)
-  const setTypingChat = useUIStore((s) => s.setTypingChat)
+  const setUserTyping = useUIStore((s) => s.setUserTyping)
+  const clearUserTyping = useUIStore((s) => s.clearUserTyping)
   const setOnlineUsers = useUIStore((s) => s.setOnlineUsers)
   const toast = useUIStore((s) => s.toast)
   const clearToast = useUIStore((s) => s.clearToast)
@@ -28,7 +29,7 @@ export function MessengerShell() {
   const [menuOpen, setMenuOpen] = useState(false)
   const qc = useQueryClient()
   const rt = useRef<RealtimeClient | null>(null)
-  const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const typingTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
   const narrow = useMediaQuery('(max-width: 900px)')
 
   const me = useQuery({ queryKey: ['me'], queryFn: getMe })
@@ -52,7 +53,7 @@ export function MessengerShell() {
 
   useEffect(() => {
     if (!accessToken) return
-    const myId = useAuthStore.getState().userId
+    const myId = Number(useAuthStore.getState().userId || 0)
     const client = new RealtimeClient(
       () => useAuthStore.getState().accessToken,
       {
@@ -66,13 +67,34 @@ export function MessengerShell() {
             return
           }
           if (ev.type === 'typing' && ev.chat_id) {
-            if (ev.user_id && ev.user_id === myId) return
-            setTypingChat(ev.chat_id)
-            if (typingTimer.current) clearTimeout(typingTimer.current)
-            typingTimer.current = setTimeout(() => setTypingChat(null), 3000)
+            const chatId = Number(ev.chat_id)
+            const userId = Number(ev.user_id || 0)
+            if (!chatId || !userId || userId === myId) return
+            setUserTyping(chatId, userId)
+            const key = `${chatId}:${userId}`
+            const prev = typingTimers.current.get(key)
+            if (prev) clearTimeout(prev)
+            typingTimers.current.set(
+              key,
+              setTimeout(() => {
+                clearUserTyping(chatId, userId)
+                typingTimers.current.delete(key)
+              }, 3000),
+            )
             return
           }
           if (ev.type === 'chat.realtime' && ev.chat_id) {
+            const chatId = Number(ev.chat_id)
+            const actorId = Number(ev.actor_id || ev.message?.sender_id || 0)
+            if (ev.event === 'message_created' && chatId && actorId) {
+              clearUserTyping(chatId, actorId)
+              const key = `${chatId}:${actorId}`
+              const t = typingTimers.current.get(key)
+              if (t) {
+                clearTimeout(t)
+                typingTimers.current.delete(key)
+              }
+            }
             applyRealtimeToCache(qc, ev)
           }
         },
@@ -80,8 +102,12 @@ export function MessengerShell() {
     )
     rt.current = client
     client.connect()
-    return () => client.close()
-  }, [accessToken, qc, setTypingChat, setOnlineUsers])
+    return () => {
+      client.close()
+      for (const t of typingTimers.current.values()) clearTimeout(t)
+      typingTimers.current.clear()
+    }
+  }, [accessToken, qc, setUserTyping, clearUserTyping, setOnlineUsers])
 
   const onTyping = useCallback((chatId: number) => {
     rt.current?.sendTyping(chatId)
@@ -101,6 +127,17 @@ export function MessengerShell() {
   return (
     <div className={shellClass}>
       <aside className="sidebar">
+        <div className="sidebar-brand">
+          <div className="sidebar-brand-mark">M</div>
+          <div>
+            <div className="sidebar-brand-title">Messanger</div>
+            {me.data?.user?.userInfo?.username ? (
+              <div className="sidebar-brand-sub">@{me.data.user.userInfo.username}</div>
+            ) : (
+              <div className="sidebar-brand-sub">Your conversations</div>
+            )}
+          </div>
+        </div>
         <div className="sidebar-top">
           <button
             type="button"
@@ -111,11 +148,19 @@ export function MessengerShell() {
               if (id) openProfile(Number(id))
             }}
           >
-            ●
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <circle cx="12" cy="8" r="3.5" stroke="currentColor" strokeWidth="1.8" />
+              <path
+                d="M5 19.5c1.8-3.2 4.2-4.8 7-4.8s5.2 1.6 7 4.8"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+              />
+            </svg>
           </button>
           <input
             className="search-input"
-            placeholder="Search"
+            placeholder="Search people & chats"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             onFocus={() => setSearchOpen(true)}
@@ -127,7 +172,14 @@ export function MessengerShell() {
               title="New"
               onClick={() => setMenuOpen((v) => !v)}
             >
-              ✎
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+                <path
+                  d="M12 5v14M5 12h14"
+                  stroke="currentColor"
+                  strokeWidth="1.9"
+                  strokeLinecap="round"
+                />
+              </svg>
             </button>
             {menuOpen && (
               <div className="dropdown">
@@ -161,12 +213,23 @@ export function MessengerShell() {
               clear()
             }}
           >
-            ⎋
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path
+                d="M10 7V5a2 2 0 0 1 2-2h7v18h-7a2 2 0 0 1-2-2v-2"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+              />
+              <path
+                d="M4 12h10M10 8l4 4-4 4"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           </button>
         </div>
-        {me.data?.user?.userInfo?.username && (
-          <div className="sidebar-me">@{me.data.user.userInfo.username}</div>
-        )}
         <ChatList filter={filter} />
       </aside>
       <ChatPane onTyping={onTyping} onPresenceSubscribe={onPresenceSubscribe} />
