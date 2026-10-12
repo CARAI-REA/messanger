@@ -1,0 +1,33 @@
+# Per-stack overlay: bind to loopback + rename containers (avoid VKS clashes).
+services:
+  kafka:
+    container_name: messanger-kafka
+    ports: !override
+      - "127.0.0.1:${KAFKA_EXTERNAL_PORT}:${KAFKA_EXTERNAL_PORT}"
+
+  kafka-init:
+    container_name: messanger-kafka-init
+
+  kafka-ui:
+    container_name: messanger-kafka-ui
+    ports: !override
+      - "127.0.0.1:${KAFKA_UI_PORT}:8080"
+
+  redis:
+    container_name: messanger-redis
+    ports: !override
+      - "127.0.0.1:${REDIS_EXTERNAL_PORT}:6379"
+
+  minio:
+    container_name: messanger-minio
+    ports: !override
+      - "127.0.0.1:${MINIO_API_PORT}:9000"
+      - "127.0.0.1:${MINIO_CONSOLE_PORT}:9001"
+
+  minio-init:
+    container_name: messanger-minio-init
+
+  opensearch:
+    container_name: messanger-opensearch
+    ports: !override
+      - "127.0.0.1:${OPENSEARCH_PORT}:9200"

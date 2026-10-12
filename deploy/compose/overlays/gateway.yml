@@ -1,0 +1,9 @@
+services:
+  gateway:
+    container_name: messanger-gateway
+    # Host 18082 — VKS SFU already owns :8082
+    ports: !override
+      - "127.0.0.1:18082:${HTTP_PORT}"
+      - "127.0.0.1:${METRICS_PORT}:${METRICS_PORT}"
+    environment:
+      WS_ALLOWED_ORIGINS: "https://chat.arbuz-arbuz.site,http://chat.arbuz-arbuz.site"

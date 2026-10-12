@@ -33,12 +33,24 @@ func New(cfg config.S3Config) (*Client, error) {
 		return nil, err
 	}
 
-	// Public client signs URLs for the browser (localhost:9000). Region is fixed so
+	// Public client signs URLs for the browser. Region is fixed so
 	// minio-go does not dial the public host from inside the media container.
 	publicEP := cfg.PublicEndpoint()
+	publicSecure := cfg.UseSSL()
+	switch {
+	case strings.HasPrefix(publicEP, "https://"):
+		publicSecure = true
+		publicEP = strings.TrimPrefix(publicEP, "https://")
+	case strings.HasPrefix(publicEP, "http://"):
+		publicSecure = false
+		publicEP = strings.TrimPrefix(publicEP, "http://")
+	case publicEP != cfg.Endpoint():
+		// Distinct public host (e.g. Cloudflare) is assumed TLS-terminated.
+		publicSecure = true
+	}
 	public, err := minio.New(publicEP, &minio.Options{
 		Creds:        credentials.NewStaticV4(cfg.AccessKey(), cfg.SecretKey(), ""),
-		Secure:       cfg.UseSSL(),
+		Secure:       publicSecure,
 		Region:       "us-east-1",
 		BucketLookup: minio.BucketLookupPath,
 	})

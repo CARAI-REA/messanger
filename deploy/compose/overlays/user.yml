@@ -1,0 +1,11 @@
+services:
+  postgres-user:
+    container_name: messanger-postgres-user
+    ports: !override
+      - "127.0.0.1:${EXTERNAL_POSTGRES_PORT}:5432"
+
+  user:
+    container_name: messanger-user
+    ports: !override
+      - "127.0.0.1:${GRPC_PORT}:${GRPC_PORT}"
+      - "127.0.0.1:${METRICS_PORT}:${METRICS_PORT}"
