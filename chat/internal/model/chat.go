@@ -14,6 +14,7 @@ type Chat struct {
 	Description        string
 	ChatType           int16
 	AvatarFileID       string
+	IsPinned           bool
 	LastMessageAt      *time.Time
 	LastMessageID      *int64
 	LastMessagePreview string

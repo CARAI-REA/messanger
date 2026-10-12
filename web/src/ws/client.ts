@@ -154,28 +154,44 @@ export function upsertChatMessage(qc: QueryClient, incoming: Message) {
   })
 }
 
+function chatActivityTime(c: Record<string, unknown>): number {
+  const raw = c.lastMessageAt ?? c.last_message_at
+  if (typeof raw === 'string' || typeof raw === 'number') {
+    const t = new Date(raw).getTime()
+    return Number.isFinite(t) ? t : 0
+  }
+  return 0
+}
+
+function sortChatsByPinThenActivity(chats: Array<Record<string, unknown>>) {
+  return [...chats].sort((a, b) => {
+    const ap = !!(a.isPinned ?? a.is_pinned)
+    const bp = !!(b.isPinned ?? b.is_pinned)
+    if (ap !== bp) return ap ? -1 : 1
+    return chatActivityTime(b) - chatActivityTime(a)
+  })
+}
+
 function patchChatPreview(qc: QueryClient, incoming: Message, bumpUnread: boolean) {
   const chatId = Number(incoming.chatId)
   qc.setQueryData(['chats'], (old: { chats?: Array<Record<string, unknown>> } | undefined) => {
     if (!old?.chats) return old
     const preview =
       incoming.text || (incoming.attachmentIds?.length ? '🖼 Photo' : '')
-    return {
-      ...old,
-      chats: old.chats.map((c) =>
-        Number(c.chatId) === chatId
-          ? {
-              ...c,
-              lastMessagePreview: preview || c.lastMessagePreview,
-              lastMessageAt: incoming.sendAt,
-              lastMessageId: incoming.messageId,
-              unreadCount: bumpUnread
-                ? Number(c.unreadCount || 0) + 1
-                : Number(c.unreadCount || 0),
-            }
-          : c,
-      ),
-    }
+    const chats = old.chats.map((c) =>
+      Number(c.chatId) === chatId
+        ? {
+            ...c,
+            lastMessagePreview: preview || c.lastMessagePreview,
+            lastMessageAt: incoming.sendAt,
+            lastMessageId: incoming.messageId,
+            unreadCount: bumpUnread
+              ? Number(c.unreadCount || 0) + 1
+              : Number(c.unreadCount || 0),
+          }
+        : c,
+    )
+    return { ...old, chats: sortChatsByPinThenActivity(chats) }
   })
 }
 

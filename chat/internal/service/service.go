@@ -17,6 +17,7 @@ type ChatService interface {
 	AddUser(ctx context.Context, actorID, chatID, userID int64, role int32) error
 	RemoveUser(ctx context.Context, actorID, chatID, userID int64) error
 	UpdateUserRole(ctx context.Context, actorID, chatID, userID int64, role int32) error
+	PinChat(ctx context.Context, actorID, chatID int64, pinned bool) error
 	SendMessage(ctx context.Context, actorID, chatID int64, text, idemKey string, attachments []string, replyTo int64) (int64, error)
 	EditMessage(ctx context.Context, actorID, messageID int64, text string) error
 	DeleteMessage(ctx context.Context, actorID, messageID int64) error

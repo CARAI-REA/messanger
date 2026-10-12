@@ -124,8 +124,13 @@ jobs:
           sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b ./bin
           sudo apt-get update -qq
           sudo apt-get install -y -qq gettext-base
+          # Taskfile expects bin/envsubst; gettext provides /usr/bin/envsubst.
+          ln -sfn "$(command -v envsubst)" ./bin/envsubst
           go install github.com/fullstorydev/grpcurl/cmd/grpcurl@latest
           echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+          ./bin/envsubst --version || envsubst --version || true
+          test -x ./bin/task
+          test -x ./bin/envsubst
       - name: Vendor + prepare env
         run: |
           bash scripts/ci_vendor.sh

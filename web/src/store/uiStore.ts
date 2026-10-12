@@ -9,11 +9,16 @@ type UIState = {
   infoOpen: boolean
   /** null = closed; number = user id to show */
   profileUserId: number | null
-  typingChatId: number | null
+  /** chatId -> userIds currently typing */
+  typingByChat: Record<number, number[]>
+  /** jump+highlight this message after opening a chat (from search) */
+  focusMessageId: number | null
   replyToId: number | null
   onlineUsers: Record<number, boolean>
   toast: string | null
   setActiveChat: (id: number | null) => void
+  openChatAtMessage: (chatId: number, messageId: number) => void
+  clearFocusMessage: () => void
   setMobileView: (v: 'list' | 'chat') => void
   setNewChatOpen: (v: boolean) => void
   setNewGroupOpen: (v: boolean) => void
@@ -21,7 +26,8 @@ type UIState = {
   setInfoOpen: (v: boolean) => void
   openProfile: (userId: number) => void
   closeProfile: () => void
-  setTypingChat: (id: number | null) => void
+  setUserTyping: (chatId: number, userId: number) => void
+  clearUserTyping: (chatId: number, userId: number) => void
   setReplyTo: (id: number | null) => void
   setOnlineUsers: (users: Record<number, boolean>) => void
   showToast: (msg: string) => void
@@ -36,7 +42,8 @@ export const useUIStore = create<UIState>((set) => ({
   searchOpen: false,
   infoOpen: false,
   profileUserId: null,
-  typingChatId: null,
+  typingByChat: {},
+  focusMessageId: null,
   replyToId: null,
   onlineUsers: {},
   toast: null,
@@ -47,8 +54,23 @@ export const useUIStore = create<UIState>((set) => ({
       mobileView: activeChatId ? 'chat' : 'list',
       infoOpen: false,
       replyToId: null,
+      focusMessageId: null,
     })
   },
+  openChatAtMessage: (chatId, messageId) => {
+    const cid = Number(chatId)
+    const mid = Number(messageId)
+    if (!cid || !mid) return
+    set({
+      activeChatId: cid,
+      focusMessageId: mid,
+      mobileView: 'chat',
+      searchOpen: false,
+      infoOpen: false,
+      replyToId: null,
+    })
+  },
+  clearFocusMessage: () => set({ focusMessageId: null }),
   setMobileView: (mobileView) => set({ mobileView }),
   setNewChatOpen: (newChatOpen) => set({ newChatOpen }),
   setNewGroupOpen: (newGroupOpen) => set({ newGroupOpen }),
@@ -60,7 +82,32 @@ export const useUIStore = create<UIState>((set) => ({
     set({ profileUserId: id, infoOpen: false })
   },
   closeProfile: () => set({ profileUserId: null }),
-  setTypingChat: (id) => set({ typingChatId: id == null ? null : Number(id) || null }),
+  setUserTyping: (chatId, userId) => {
+    const cid = Number(chatId)
+    const uid = Number(userId)
+    if (!cid || !uid) return
+    set((state) => {
+      const prev = state.typingByChat[cid] ?? []
+      if (prev.includes(uid)) return state
+      return {
+        typingByChat: { ...state.typingByChat, [cid]: [...prev, uid] },
+      }
+    })
+  },
+  clearUserTyping: (chatId, userId) => {
+    const cid = Number(chatId)
+    const uid = Number(userId)
+    if (!cid || !uid) return
+    set((state) => {
+      const prev = state.typingByChat[cid] ?? []
+      if (!prev.includes(uid)) return state
+      const next = prev.filter((id) => id !== uid)
+      const typingByChat = { ...state.typingByChat }
+      if (next.length) typingByChat[cid] = next
+      else delete typingByChat[cid]
+      return { typingByChat }
+    })
+  },
   setReplyTo: (id) => set({ replyToId: id == null ? null : Number(id) || null }),
   setOnlineUsers: (onlineUsers) => set({ onlineUsers }),
   showToast: (toast) => set({ toast }),

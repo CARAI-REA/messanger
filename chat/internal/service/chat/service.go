@@ -226,6 +226,14 @@ func (s *serv) UpdateUserRole(ctx context.Context, actorID, chatID, userID int64
 	return s.repo.UpdateMemberRole(ctx, chatID, userID, role, []repository.OutboxEvent{oe})
 }
 
+func (s *serv) PinChat(ctx context.Context, actorID, chatID int64, pinned bool) error {
+	ok, err := s.repo.IsMember(ctx, chatID, actorID)
+	if err != nil || !ok {
+		return fmt.Errorf("not a member")
+	}
+	return s.repo.SetChatPinned(ctx, chatID, actorID, pinned)
+}
+
 func (s *serv) SendMessage(ctx context.Context, actorID, chatID int64, text, idemKey string, attachments []string, replyTo int64) (int64, error) {
 	ok, err := s.repo.IsMember(ctx, chatID, actorID)
 	if err != nil || !ok {

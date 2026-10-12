@@ -261,6 +261,17 @@ func (i *Implementation) MarkRead(ctx context.Context, req *chatv1.MarkReadReque
 	return &emptypb.Empty{}, nil
 }
 
+func (i *Implementation) PinChat(ctx context.Context, req *chatv1.PinChatRequest) (*emptypb.Empty, error) {
+	uid, err := userIDFromCtx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err := i.svc.PinChat(ctx, uid, req.GetChatId(), req.GetIsPinned()); err != nil {
+		return nil, status.Errorf(codes.PermissionDenied, "%v", err)
+	}
+	return &emptypb.Empty{}, nil
+}
+
 func (i *Implementation) GetUnreadCounts(ctx context.Context, req *chatv1.GetUnreadCountsRequest) (*chatv1.GetUnreadCountsResponse, error) {
 	uid, err := userIDFromCtx(ctx)
 	if err != nil {
@@ -288,6 +299,7 @@ func toChatProto(c *model.Chat) *chatv1.Chat {
 		ParticipantIds:     c.ParticipantIDs,
 		PeerUserId:         c.PeerUserID,
 		AvatarFileId:       c.AvatarFileID,
+		IsPinned:           c.IsPinned,
 	}
 	if c.LastMessageAt != nil {
 		ch.LastMessageAt = timestamppb.New(*c.LastMessageAt)

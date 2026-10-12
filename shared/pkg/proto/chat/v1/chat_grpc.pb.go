@@ -36,6 +36,7 @@ const (
 	ChatService_PinMessage_FullMethodName            = "/chat.v1.ChatService/PinMessage"
 	ChatService_ListMessages_FullMethodName          = "/chat.v1.ChatService/ListMessages"
 	ChatService_MarkRead_FullMethodName              = "/chat.v1.ChatService/MarkRead"
+	ChatService_PinChat_FullMethodName               = "/chat.v1.ChatService/PinChat"
 	ChatService_GetUnreadCounts_FullMethodName       = "/chat.v1.ChatService/GetUnreadCounts"
 )
 
@@ -59,6 +60,7 @@ type ChatServiceClient interface {
 	PinMessage(ctx context.Context, in *PinMessageRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	ListMessages(ctx context.Context, in *ListMessagesRequest, opts ...grpc.CallOption) (*ListMessagesResponse, error)
 	MarkRead(ctx context.Context, in *MarkReadRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	PinChat(ctx context.Context, in *PinChatRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetUnreadCounts(ctx context.Context, in *GetUnreadCountsRequest, opts ...grpc.CallOption) (*GetUnreadCountsResponse, error)
 }
 
@@ -230,6 +232,16 @@ func (c *chatServiceClient) MarkRead(ctx context.Context, in *MarkReadRequest, o
 	return out, nil
 }
 
+func (c *chatServiceClient) PinChat(ctx context.Context, in *PinChatRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, ChatService_PinChat_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *chatServiceClient) GetUnreadCounts(ctx context.Context, in *GetUnreadCountsRequest, opts ...grpc.CallOption) (*GetUnreadCountsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetUnreadCountsResponse)
@@ -260,6 +272,7 @@ type ChatServiceServer interface {
 	PinMessage(context.Context, *PinMessageRequest) (*emptypb.Empty, error)
 	ListMessages(context.Context, *ListMessagesRequest) (*ListMessagesResponse, error)
 	MarkRead(context.Context, *MarkReadRequest) (*emptypb.Empty, error)
+	PinChat(context.Context, *PinChatRequest) (*emptypb.Empty, error)
 	GetUnreadCounts(context.Context, *GetUnreadCountsRequest) (*GetUnreadCountsResponse, error)
 	mustEmbedUnimplementedChatServiceServer()
 }
@@ -318,6 +331,9 @@ func (UnimplementedChatServiceServer) ListMessages(context.Context, *ListMessage
 }
 func (UnimplementedChatServiceServer) MarkRead(context.Context, *MarkReadRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method MarkRead not implemented")
+}
+func (UnimplementedChatServiceServer) PinChat(context.Context, *PinChatRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PinChat not implemented")
 }
 func (UnimplementedChatServiceServer) GetUnreadCounts(context.Context, *GetUnreadCountsRequest) (*GetUnreadCountsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetUnreadCounts not implemented")
@@ -631,6 +647,24 @@ func _ChatService_MarkRead_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ChatService_PinChat_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PinChatRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServiceServer).PinChat(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChatService_PinChat_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServiceServer).PinChat(ctx, req.(*PinChatRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _ChatService_GetUnreadCounts_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetUnreadCountsRequest)
 	if err := dec(in); err != nil {
@@ -719,6 +753,10 @@ var ChatService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "MarkRead",
 			Handler:    _ChatService_MarkRead_Handler,
+		},
+		{
+			MethodName: "PinChat",
+			Handler:    _ChatService_PinChat_Handler,
 		},
 		{
 			MethodName: "GetUnreadCounts",

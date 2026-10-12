@@ -14,6 +14,7 @@ export type Chat = {
   participantIds?: number[]
   peerUserId?: number
   avatarFileId?: string
+  isPinned?: boolean
 }
 
 export type ChatRole = 'ROLE_USER' | 'ROLE_ADMIN' | 'ROLE_OWNER' | number
@@ -61,6 +62,7 @@ function normalizeChat(raw: Record<string, unknown>): Chat {
     participantIds,
     peerUserId: raw.peerUserId || raw.peer_user_id ? numId(raw.peerUserId ?? raw.peer_user_id) : 0,
     avatarFileId: String(raw.avatarFileId ?? raw.avatar_file_id ?? '') || undefined,
+    isPinned: !!(raw.isPinned ?? raw.is_pinned),
   }
 }
 
@@ -202,6 +204,13 @@ export async function pinMessage(messageId: number, isPinned: boolean) {
   return api(`/api/v1/messages/${messageId}:pin`, {
     method: 'POST',
     body: JSON.stringify({ messageId, isPinned }),
+  })
+}
+
+export async function pinChat(chatId: number, isPinned: boolean) {
+  return api(`/api/v1/chats/${chatId}:pin`, {
+    method: 'POST',
+    body: JSON.stringify({ chatId, isPinned }),
   })
 }
 

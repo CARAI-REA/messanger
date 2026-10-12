@@ -1,0 +1,17 @@
+services:
+  postgres-media:
+    container_name: messanger-postgres-media
+    ports: !override
+      - "127.0.0.1:${EXTERNAL_POSTGRES_PORT}:5432"
+
+  media:
+    container_name: messanger-media
+    ports: !override
+      - "127.0.0.1:${GRPC_PORT}:${GRPC_PORT}"
+      - "127.0.0.1:${METRICS_PORT}:${METRICS_PORT}"
+    environment:
+      S3_ENDPOINT: minio:9000
+      # Host only (no path) — minio-go rejects FQ paths; path-style URLs hit /messanger/ via web nginx
+      S3_PUBLIC_ENDPOINT: chat.arbuz-arbuz.site
+      # Internal MinIO is plain HTTP; public client uses TLS when endpoint differs (see s3/client.go)
+      S3_USE_SSL: "false"

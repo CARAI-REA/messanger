@@ -38,7 +38,7 @@ func (i *Implementation) GetAccessToken(ctx context.Context, req *authv1.GetAcce
 	return &authv1.GetAccessTokenResponse{AccessToken: tok}, nil
 }
 
-func (i *Implementation) ValidateToken(ctx context.Context, _ *emptypb.Empty) (*emptypb.Empty, error) {
+func (i *Implementation) ValidateToken(ctx context.Context, _ *authv1.ValidateTokenRequest) (*emptypb.Empty, error) {
 	md, _ := metadata.FromIncomingContext(ctx)
 	vals := md.Get("authorization")
 	if len(vals) == 0 { return nil, status.Error(codes.Unauthenticated, "missing token") }

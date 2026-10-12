@@ -99,40 +99,66 @@ echo "OK  idempotent message_id=$MSG_ID"
 echo "-- WS connect (Authorization header) --"
 export SMOKE_ACCESS="$ACCESS"
 python3 - <<'PY'
-import os, sys
-try:
-    import websocket
-except ImportError:
-    import subprocess
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "websocket-client"])
-    import websocket
+import base64, os, socket
 
 token = os.environ["SMOKE_ACCESS"]
-url = "ws://localhost:8082/ws"
-ws = websocket.create_connection(url, header=[f"Authorization: Bearer {token}"], timeout=5)
-ws.settimeout(5)
-try:
-    ws.recv()
-except Exception:
-    pass
-ws.close()
+key = base64.b64encode(os.urandom(16)).decode("ascii")
+req = (
+    "GET /ws HTTP/1.1\r\n"
+    "Host: localhost:8082\r\n"
+    "Upgrade: websocket\r\n"
+    "Connection: Upgrade\r\n"
+    f"Sec-WebSocket-Key: {key}\r\n"
+    "Sec-WebSocket-Version: 13\r\n"
+    f"Authorization: Bearer {token}\r\n"
+    "\r\n"
+)
+with socket.create_connection(("127.0.0.1", 8082), timeout=5) as s:
+    s.sendall(req.encode())
+    buf = b""
+    while b"\r\n\r\n" not in buf and len(buf) < 8192:
+        chunk = s.recv(1024)
+        if not chunk:
+            break
+        buf += chunk
+head = buf.split(b"\r\n\r\n", 1)[0].decode("latin1", errors="replace")
+status = head.split("\r\n", 1)[0]
+if "101" not in status:
+    raise SystemExit(f"FAIL ws upgrade: {status}\n{head[:300]}")
 print("OK  ws connected with Authorization header")
 PY
 
 # Optional second gateway replica (docker compose --scale gateway=2 may not publish second host port)
 if nc -z localhost 8083 2>/dev/null; then
   echo "-- Multi-gateway WS (:8083) --"
+  export SMOKE_ACCESS="$ACCESS"
   python3 - <<'PY'
-import os, sys
-try:
-    import websocket
-except ImportError:
-    import subprocess
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "websocket-client"])
-    import websocket
+import base64, os, socket
+
 token = os.environ["SMOKE_ACCESS"]
-ws = websocket.create_connection("ws://localhost:8083/ws", header=[f"Authorization: Bearer {token}"], timeout=5)
-ws.close()
+key = base64.b64encode(os.urandom(16)).decode("ascii")
+req = (
+    "GET /ws HTTP/1.1\r\n"
+    "Host: localhost:8083\r\n"
+    "Upgrade: websocket\r\n"
+    "Connection: Upgrade\r\n"
+    f"Sec-WebSocket-Key: {key}\r\n"
+    "Sec-WebSocket-Version: 13\r\n"
+    f"Authorization: Bearer {token}\r\n"
+    "\r\n"
+)
+with socket.create_connection(("127.0.0.1", 8083), timeout=5) as s:
+    s.sendall(req.encode())
+    buf = b""
+    while b"\r\n\r\n" not in buf and len(buf) < 8192:
+        chunk = s.recv(1024)
+        if not chunk:
+            break
+        buf += chunk
+head = buf.split(b"\r\n\r\n", 1)[0].decode("latin1", errors="replace")
+status = head.split("\r\n", 1)[0]
+if "101" not in status:
+    raise SystemExit(f"FAIL ws upgrade on :8083: {status}\n{head[:300]}")
 print("OK  second gateway replica reachable")
 PY
 else

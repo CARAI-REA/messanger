@@ -4,7 +4,16 @@ vars:
   GO_VERSION: '1.25'
   BIN_DIR: '{{.ROOT_DIR}}/bin'
   BUF: '{{.BIN_DIR}}/buf'
-  ENVSUBST: '{{.BIN_DIR}}/envsubst'
+  # Prefer local binary (a8m/envsubst); fall back to gettext envsubst on CI/Linux.
+  ENVSUBST:
+    sh: |
+      if [ -x "{{.BIN_DIR}}/envsubst" ]; then
+        echo "{{.BIN_DIR}}/envsubst"
+      elif command -v envsubst >/dev/null 2>&1; then
+        command -v envsubst
+      else
+        echo "{{.BIN_DIR}}/envsubst"
+      fi
   ENVDIR: '{{.ROOT_DIR}}/deploy/env'
   MODULES: platform,shared,user,auth,chat,gateway,media,search,notify
   SERVICES: core,user,auth,chat,gateway,media,search,notify,envoy,observability,web

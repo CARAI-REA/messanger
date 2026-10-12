@@ -347,6 +347,42 @@ func (x *LogoutRequest) GetRefreshToken() string {
 	return ""
 }
 
+type ValidateTokenRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ValidateTokenRequest) Reset() {
+	*x = ValidateTokenRequest{}
+	mi := &file_auth_v1_auth_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ValidateTokenRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ValidateTokenRequest) ProtoMessage() {}
+
+func (x *ValidateTokenRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_v1_auth_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ValidateTokenRequest.ProtoReflect.Descriptor instead.
+func (*ValidateTokenRequest) Descriptor() ([]byte, []int) {
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{7}
+}
+
 var File_auth_v1_auth_proto protoreflect.FileDescriptor
 
 const file_auth_v1_auth_proto_rawDesc = "" +
@@ -367,12 +403,13 @@ const file_auth_v1_auth_proto_rawDesc = "" +
 	"\x16GetAccessTokenResponse\x12!\n" +
 	"\faccess_token\x18\x01 \x01(\tR\vaccessToken\"4\n" +
 	"\rLogoutRequest\x12#\n" +
-	"\rrefresh_token\x18\x01 \x01(\tR\frefreshToken2\x88\x04\n" +
+	"\rrefresh_token\x18\x01 \x01(\tR\frefreshToken\"\x16\n" +
+	"\x14ValidateTokenRequest2\x8f\x04\n" +
 	"\vAuthService\x12U\n" +
 	"\x05Login\x12\x15.auth.v1.LoginRequest\x1a\x16.auth.v1.LoginResponse\"\x1d\x82\xd3\xe4\x93\x02\x17:\x01*\"\x12/api/v1/auth/login\x12u\n" +
 	"\x0fGetRefreshToken\x12\x1f.auth.v1.GetRefreshTokenRequest\x1a .auth.v1.GetRefreshTokenResponse\"\x1f\x82\xd3\xe4\x93\x02\x19:\x01*\"\x14/api/v1/auth/refresh\x12q\n" +
-	"\x0eGetAccessToken\x12\x1e.auth.v1.GetAccessTokenRequest\x1a\x1f.auth.v1.GetAccessTokenResponse\"\x1e\x82\xd3\xe4\x93\x02\x18:\x01*\"\x13/api/v1/auth/access\x12^\n" +
-	"\rValidateToken\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\"\x1d\x82\xd3\xe4\x93\x02\x17\x12\x15/api/v1/auth/validate\x12X\n" +
+	"\x0eGetAccessToken\x12\x1e.auth.v1.GetAccessTokenRequest\x1a\x1f.auth.v1.GetAccessTokenResponse\"\x1e\x82\xd3\xe4\x93\x02\x18:\x01*\"\x13/api/v1/auth/access\x12e\n" +
+	"\rValidateToken\x12\x1d.auth.v1.ValidateTokenRequest\x1a\x16.google.protobuf.Empty\"\x1d\x82\xd3\xe4\x93\x02\x17\x12\x15/api/v1/auth/validate\x12X\n" +
 	"\x06Logout\x12\x16.auth.v1.LogoutRequest\x1a\x16.google.protobuf.Empty\"\x1e\x82\xd3\xe4\x93\x02\x18:\x01*\"\x13/api/v1/auth/logoutB@Z>github.com/CARAI-REA/messanger/shared/pkg/proto/auth/v1;authv1b\x06proto3"
 
 var (
@@ -387,7 +424,7 @@ func file_auth_v1_auth_proto_rawDescGZIP() []byte {
 	return file_auth_v1_auth_proto_rawDescData
 }
 
-var file_auth_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_auth_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_auth_v1_auth_proto_goTypes = []any{
 	(*LoginRequest)(nil),            // 0: auth.v1.LoginRequest
 	(*LoginResponse)(nil),           // 1: auth.v1.LoginResponse
@@ -396,19 +433,20 @@ var file_auth_v1_auth_proto_goTypes = []any{
 	(*GetAccessTokenRequest)(nil),   // 4: auth.v1.GetAccessTokenRequest
 	(*GetAccessTokenResponse)(nil),  // 5: auth.v1.GetAccessTokenResponse
 	(*LogoutRequest)(nil),           // 6: auth.v1.LogoutRequest
-	(*emptypb.Empty)(nil),           // 7: google.protobuf.Empty
+	(*ValidateTokenRequest)(nil),    // 7: auth.v1.ValidateTokenRequest
+	(*emptypb.Empty)(nil),           // 8: google.protobuf.Empty
 }
 var file_auth_v1_auth_proto_depIdxs = []int32{
 	0, // 0: auth.v1.AuthService.Login:input_type -> auth.v1.LoginRequest
 	2, // 1: auth.v1.AuthService.GetRefreshToken:input_type -> auth.v1.GetRefreshTokenRequest
 	4, // 2: auth.v1.AuthService.GetAccessToken:input_type -> auth.v1.GetAccessTokenRequest
-	7, // 3: auth.v1.AuthService.ValidateToken:input_type -> google.protobuf.Empty
+	7, // 3: auth.v1.AuthService.ValidateToken:input_type -> auth.v1.ValidateTokenRequest
 	6, // 4: auth.v1.AuthService.Logout:input_type -> auth.v1.LogoutRequest
 	1, // 5: auth.v1.AuthService.Login:output_type -> auth.v1.LoginResponse
 	3, // 6: auth.v1.AuthService.GetRefreshToken:output_type -> auth.v1.GetRefreshTokenResponse
 	5, // 7: auth.v1.AuthService.GetAccessToken:output_type -> auth.v1.GetAccessTokenResponse
-	7, // 8: auth.v1.AuthService.ValidateToken:output_type -> google.protobuf.Empty
-	7, // 9: auth.v1.AuthService.Logout:output_type -> google.protobuf.Empty
+	8, // 8: auth.v1.AuthService.ValidateToken:output_type -> google.protobuf.Empty
+	8, // 9: auth.v1.AuthService.Logout:output_type -> google.protobuf.Empty
 	5, // [5:10] is the sub-list for method output_type
 	0, // [0:5] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
@@ -427,7 +465,7 @@ func file_auth_v1_auth_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_auth_v1_auth_proto_rawDesc), len(file_auth_v1_auth_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   7,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

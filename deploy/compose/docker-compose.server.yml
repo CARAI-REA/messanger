@@ -1,0 +1,4 @@
+# Deprecated monolithic overlay — use deploy/compose/overlays/<stack>.yml
+# Kept so older docs/scripts that reference this path fail loudly with a comment.
+# Prefer: scripts/deploy_server.sh
+services: {}

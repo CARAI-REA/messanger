@@ -251,6 +251,7 @@ func (r *repo) GetChat(ctx context.Context, chatID, userID int64) (*model.Chat, 
 	var c model.Chat
 	err = r.db.QueryRow(ctx, `
 		SELECT c.id, c.owner_id, c.name, c.description, c.chat_type, COALESCE(c.avatar_file_id, ''),
+		       COALESCE(cm.is_pinned, false),
 		       c.last_message_at, c.last_message_id, c.created_at,
 		       COALESCE((SELECT COUNT(*) FROM messages m
 		         WHERE m.chat_id = c.id AND m.deleted_at IS NULL
@@ -260,7 +261,7 @@ func (r *repo) GetChat(ctx context.Context, chatID, userID int64) (*model.Chat, 
 		JOIN chat_members cm ON cm.chat_id = c.id AND cm.user_id = $2
 		WHERE c.id = $1 AND c.deleted_at IS NULL`,
 		chatID, userID,
-	).Scan(&c.ID, &c.OwnerID, &c.Name, &c.Description, &c.ChatType, &c.AvatarFileID, &c.LastMessageAt, &c.LastMessageID, &c.CreatedAt, &c.UnreadCount)
+	).Scan(&c.ID, &c.OwnerID, &c.Name, &c.Description, &c.ChatType, &c.AvatarFileID, &c.IsPinned, &c.LastMessageAt, &c.LastMessageID, &c.CreatedAt, &c.UnreadCount)
 	if err == pgx.ErrNoRows {
 		return nil, nil, fmt.Errorf("chat not found")
 	}
@@ -299,6 +300,7 @@ func (r *repo) ListChats(ctx context.Context, userID int64, cursor string, limit
 	}
 	q := `
 		SELECT c.id, c.owner_id, c.name, c.description, c.chat_type, COALESCE(c.avatar_file_id, ''),
+		       COALESCE(cm.is_pinned, false),
 		       c.last_message_at, c.last_message_id, c.created_at,
 		       COALESCE((SELECT COUNT(*) FROM messages m
 		         WHERE m.chat_id = c.id AND m.deleted_at IS NULL
@@ -314,7 +316,7 @@ func (r *repo) ListChats(ctx context.Context, userID int64, cursor string, limit
 		args = append(args, *cursorTime, cursorID)
 		argN += 2
 	}
-	q += fmt.Sprintf(` ORDER BY COALESCE(c.last_message_at, c.created_at) DESC, c.id DESC LIMIT $%d`, argN)
+	q += fmt.Sprintf(` ORDER BY cm.is_pinned DESC, COALESCE(c.last_message_at, c.created_at) DESC, c.id DESC LIMIT $%d`, argN)
 	args = append(args, limit+1)
 
 	rows, err := r.db.Query(ctx, q, args...)
@@ -325,7 +327,7 @@ func (r *repo) ListChats(ctx context.Context, userID int64, cursor string, limit
 	var chats []model.Chat
 	for rows.Next() {
 		var c model.Chat
-		if err := rows.Scan(&c.ID, &c.OwnerID, &c.Name, &c.Description, &c.ChatType, &c.AvatarFileID, &c.LastMessageAt, &c.LastMessageID, &c.CreatedAt, &c.UnreadCount); err != nil {
+		if err := rows.Scan(&c.ID, &c.OwnerID, &c.Name, &c.Description, &c.ChatType, &c.AvatarFileID, &c.IsPinned, &c.LastMessageAt, &c.LastMessageID, &c.CreatedAt, &c.UnreadCount); err != nil {
 			return nil, "", err
 		}
 		chats = append(chats, c)
@@ -444,6 +446,20 @@ func (r *repo) GetMemberRole(ctx context.Context, chatID, userID int64) (int32, 
 		return 0, fmt.Errorf("not a member")
 	}
 	return role, err
+}
+
+func (r *repo) SetChatPinned(ctx context.Context, chatID, userID int64, pinned bool) error {
+	tag, err := r.db.Exec(ctx,
+		`UPDATE chat_members SET is_pinned = $3 WHERE chat_id = $1 AND user_id = $2`,
+		chatID, userID, pinned,
+	)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return fmt.Errorf("not a member")
+	}
+	return nil
 }
 
 func scanMsg(row pgx.Row) (*model.Message, error) {
